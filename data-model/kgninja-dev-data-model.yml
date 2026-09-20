@@ -1,0 +1,106 @@
+generated: '2026-09-19'
+method: derived
+source: openapi/kgninja-dev-openapi.json
+docs: https://agent-economy.kgninja.dev/docs/reproducible-x402-receipts
+description: >-
+  Entity graph derived from the 47 component schemas in the provider's OpenAPI 3.1.0 ($ref links and the
+  prefixed identifier fields) plus the receipts guide. The product has one transaction shape: a bounded
+  verification REQUEST, wrapped with a SPEND POLICY into an INTENT, prechecked into an unsigned RECEIPT
+  whose digest binds a QUOTE, paid through an x402 PAYMENT REQUIREMENT, executed into a RESULT with
+  SIGNED EVIDENCE, and delivered with a DELIVERY RECEIPT and FULFILLMENT PROOF. Everything is addressed by
+  a prefixed id or a sha256: digest; nothing is retrievable after delivery (no GET by id exists for any
+  transaction entity), so the "relationships" are relationships inside one response, not across a
+  queryable store.
+identifier_prefixes:
+  req_: request_id (server-issued per request; also the X-Request-ID header)
+  qte_: quote_id (QuoteResponse; bound to a PaidVerificationBinding)
+  pqt_: quote_id on the MachineQuote returned inside a free precheck
+  txn_: transaction_id (VerifyEvidenceResponse)
+  evd_: evidence_id (SignedEvidence)
+  rcpt_: receipt_id (DeliveryReceipt / VerificationReceiptPayload)
+  'sha256:': Sha256Digest — request_hash, evidence_digest, receipt_digest, binding_digest, precheck_receipt_digest, schema_digest, checks_digest
+  'urn:kgninja:params:agent-credential:anonymous-registration-receipt': credential type of the optional registration receipt
+domains:
+  request: [VerifyEvidenceRequest, InlineJsonEvidence, Assertion, Sha256EqualsAssertion, JsonPointerExistsAssertion, JsonPointerEqualsAssertion, JsonTypeIsAssertion, JsonPointer, VerificationSpendPolicy, VerificationPrecheckIntent, PaidVerificationIntent]
+  decision_support: [VerificationRecipes, PrecheckReceipt, CanonicalOffer, CanonicalSchemaReference, MachineQuote, FreeRequestValidation, FreeRequestValidationFailure]
+  purchase: [QuoteResponse, Price, PaidVerificationBinding, QuotedPaidVerificationBinding, PaymentRequiredPaidVerificationBinding, DeliveredPaidVerificationBinding, RefusedPaidVerificationBinding, X402PaymentRequired, X402PaymentRequirement]
+  delivery: [VerifyEvidenceResponse, VerificationResult, SignedEvidence, DeliveryReceipt, FulfillmentProof, SignedVerificationReceipt, VerificationReceiptPayload]
+  operations: [HealthResponse, PublicStats, RevenueGoalStatus]
+  discovery: [Jwks, AgentManifest, VerificationKey, X402Manifest]
+  common: [Sha256Digest, ErrorResponse]
+entities:
+- {name: VerifyEvidenceRequest, domain: request, key: client_request_id (caller-chosen, 1-64 chars), description: 'The bounded unit of work: one inline JSON evidence blob and 1-16 assertions.'}
+- {name: InlineJsonEvidence, domain: request, description: 'media_type const application/json + content_base64 (<= 87,384 chars, <= 65,536 decoded bytes). Never retained; only its digest survives.'}
+- {name: Assertion, domain: request, description: 'oneOf four operators; json_pointer_* address the evidence with RFC 6901 JsonPointer.'}
+- {name: VerificationSpendPolicy, domain: request, description: 'The caller''s payment boundary: policy_version const agent-economy/precheck-policy/2.0, max_amount_atomic, network (eip155:8453 | eip155:84532), asset, pay_to.'}
+- {name: VerificationPrecheckIntent, domain: request, description: '{request, spend_policy} — the body of the free precheck.'}
+- {name: PaidVerificationIntent, domain: request, description: '{request, spend_policy, precheck_receipt_digest} — the body of /quote, /verify-evidence, every MCP purchase tool and the A2A DataPart. The request and policy must be byte-identical to the prechecked ones.'}
+- {name: PrecheckReceipt, domain: decision_support, key: receipt_digest, description: 'Unsigned (attestation.level const unsigned_precheck, signed const false), server-local record of the precheck: decision {recommendation review_before_payment | refuse_paid_call, spend_authorized, refusal_reason}, spend_policy_check, request_check (hash), checked_urls, mcp_server_card digest, a2a fields, x402_terms, unpaid_status, dropped_evidence digest.'}
+- {name: CanonicalOffer, domain: decision_support, key: service_id + generation_id, description: 'The product as an offer: tool {name verify_evidence, use_when, do_not_use_when}, input/output CanonicalSchemaReference (schema_id + schema_digest), pricing, free_precheck, facts_only. Returned by the precheck, the MCP describe tool and inside refusals.'}
+- {name: MachineQuote, domain: decision_support, key: quote_id (pqt_), description: 'The quote-shaped part of a precheck response: precheck_status eligible | ineligible | unsupported, exact_price, supported/unsupported checks, expected_fulfillment, paid_tool, quote_scope, client_echo_required.'}
+- {name: VerificationRecipes, domain: decision_support, description: 'Provider-authored use cases; each recipe embeds a VerificationPrecheckIntent example (see sandbox/).'}
+- {name: QuoteResponse, domain: purchase, key: quote_id (qte_), description: 'Free bound quote: request_hash, product const verify-evidence/det-json-v1, Price, expires_at, economic_guard {decision const accept, contribution_margin_lower_bound_microusd}, purchase {method POST, url, quote_header const X-Quote-ID}, paid_verification_binding.'}
+- {name: Price, domain: purchase, description: 'amount (atomic string), asset, symbol const USDC, decimals const 6, network.'}
+- {name: PaidVerificationBinding, domain: purchase, key: binding_digest, description: 'The state machine of a purchase — state quoted | payment_required | delivered | refused (four oneOf variants) — binding precheck_receipt_digest, request_hash, evidence_digest, policy_version, price_cap_atomic, quoted_amount_atomic, network, asset, pay_to, quote_id, expires_at, discovery_survived, paid_receipt_id and refusal_reason together.'}
+- {name: X402PaymentRequired, domain: purchase, description: 'The 402 body (x402 v2): x402Version const 2, error, resource {url, serviceName const Agent Verification Utility, ...}, accepts[] X402PaymentRequirement, extensions (bazaar), paid_verification_binding (payment_required state).'}
+- {name: X402PaymentRequirement, domain: purchase, description: 'scheme const exact, network, amount const "10000", asset, payTo, maxTimeoutSeconds, extra.'}
+- {name: VerifyEvidenceResponse, domain: delivery, key: transaction_id (txn_), description: 'The paid result: quote_id, request_hash, VerificationResult, SignedEvidence, DeliveryReceipt, FulfillmentProof.'}
+- {name: VerificationResult, domain: delivery, description: 'outcome, algorithm_version (det-json-v1), checks[] {index, op, passed}, executed_at.'}
+- {name: SignedEvidence, domain: delivery, key: evidence_id (evd_), description: 'signed_payload_b64url + signature {alg Ed25519, kid, value_b64url}; verified against the JWKS directly over the decoded bytes.'}
+- {name: DeliveryReceipt, domain: delivery, key: receipt_id (rcpt_), description: 'delivery, price_paid_microusd, variable_cost_upper_bound_microusd, contribution_margin_lower_bound_microusd, cost_basis, paid_verification_binding (delivered state).'}
+- {name: FulfillmentProof, domain: delivery, description: 'transaction + fulfillment digests, payment, signature, and a SignedVerificationReceipt.'}
+- {name: VerificationReceiptPayload, domain: delivery, key: receipt_id, description: 'type, schema_version, request (hash), verifier, payment {payment_protocol x402-v2-exact | mock-payment-v1, quote_id, network, asset, amount_base_unit, verification_status const verified, settlement_status, settlement_evidence_type, transaction_hash}, result (hash), recourse {re_evaluation_supported const true, re_evaluation_requires_new_payment const true, supersession_supported const false, receipt_retrieval null, evidence_retrieval null}, issued_at.'}
+- {name: HealthResponse, domain: operations, description: 'status ok | degraded | maintenance; checks {deploy_enabled, runtime_enabled, payments_enabled, cost_basis_fresh}.'}
+- {name: PublicStats, domain: operations, description: 'availability, payment, operator_identity, activity {delivered_transactions, settled_revenue_atomic, quotes_last_24h, latest_delivery_at}, operations {reconciliation_backlog, cost_basis_fresh}.'}
+- {name: RevenueGoalStatus, domain: operations, description: 'status (observed not_configured), goal, measurement, progress, next_improvement, latest_evaluation.'}
+- {name: AgentManifest, domain: discovery, key: id (agent-verification-utility), description: 'Provider-specific service manifest (/agent.json) — endpoints, decision_support, protocols, operator_identity, payment (Price), verification_keys[] (VerificationKey), constraints, trust_boundaries.'}
+- {name: VerificationKey, domain: discovery, key: kid, description: 'alg Ed25519, publicKeyJwk, not_before, not_after?; mirrored in the JWKS.'}
+- {name: Jwks, domain: discovery, description: 'RFC 7517 key set at /.well-known/jwks.json.'}
+- {name: X402Manifest, domain: discovery, description: 'x402Version, payment_mode, simulation, simulation_notice, resources[] X402PaymentRequirement.'}
+- {name: ErrorResponse, domain: common, description: '{error {code, message, request_id, retryable, details {paid_verification_binding? (refused state)}}}.'}
+relationships:
+- {from: VerifyEvidenceRequest, to: InlineJsonEvidence, type: has_one, via: 'evidence'}
+- {from: VerifyEvidenceRequest, to: Assertion, type: has_many, via: 'assertions (1-16)'}
+- {from: JsonPointerExistsAssertion, to: JsonPointer, type: has_one, via: 'path'}
+- {from: JsonPointerEqualsAssertion, to: JsonPointer, type: has_one, via: 'path'}
+- {from: JsonTypeIsAssertion, to: JsonPointer, type: has_one, via: 'path'}
+- {from: VerificationPrecheckIntent, to: VerifyEvidenceRequest, type: has_one, via: 'request'}
+- {from: VerificationPrecheckIntent, to: VerificationSpendPolicy, type: has_one, via: 'spend_policy'}
+- {from: PaidVerificationIntent, to: VerifyEvidenceRequest, type: has_one, via: 'request'}
+- {from: PaidVerificationIntent, to: VerificationSpendPolicy, type: has_one, via: 'spend_policy'}
+- {from: PaidVerificationIntent, to: PrecheckReceipt, type: belongs_to, via: 'precheck_receipt_digest -> PrecheckReceipt.receipt_digest'}
+- {from: VerificationRecipes, to: VerificationPrecheckIntent, type: has_many, via: 'recipes[].precheck_intent_example'}
+- {from: FreeRequestValidation, to: CanonicalOffer, type: has_one, via: 'canonical_offer'}
+- {from: FreeRequestValidation, to: MachineQuote, type: has_one, via: 'machine_quote'}
+- {from: FreeRequestValidation, to: PrecheckReceipt, type: has_one, via: 'precheck_receipt'}
+- {from: FreeRequestValidationFailure, to: CanonicalOffer, type: has_one, via: 'canonical_offer'}
+- {from: PrecheckReceipt, to: VerificationSpendPolicy, type: has_one, via: 'spend_policy'}
+- {from: CanonicalOffer, to: CanonicalSchemaReference, type: has_one, via: 'input'}
+- {from: QuoteResponse, to: Price, type: has_one, via: 'price'}
+- {from: QuoteResponse, to: PaidVerificationBinding, type: has_one, via: 'paid_verification_binding (quoted state)'}
+- {from: PaidVerificationBinding, to: PrecheckReceipt, type: belongs_to, via: 'precheck_receipt_digest'}
+- {from: PaidVerificationBinding, to: QuoteResponse, type: belongs_to, via: 'quote_id'}
+- {from: X402PaymentRequired, to: X402PaymentRequirement, type: has_many, via: 'accepts'}
+- {from: X402PaymentRequired, to: PaidVerificationBinding, type: has_one, via: 'paid_verification_binding (payment_required state)'}
+- {from: VerifyEvidenceResponse, to: QuoteResponse, type: belongs_to, via: 'quote_id'}
+- {from: VerifyEvidenceResponse, to: VerificationResult, type: has_one, via: 'verification'}
+- {from: VerifyEvidenceResponse, to: SignedEvidence, type: has_one, via: 'evidence'}
+- {from: VerifyEvidenceResponse, to: DeliveryReceipt, type: has_one, via: 'receipt'}
+- {from: VerifyEvidenceResponse, to: FulfillmentProof, type: has_one, via: 'fulfillment_proof'}
+- {from: DeliveryReceipt, to: PaidVerificationBinding, type: has_one, via: 'paid_verification_binding (delivered state)'}
+- {from: FulfillmentProof, to: SignedVerificationReceipt, type: has_one, via: 'verification_receipt'}
+- {from: SignedVerificationReceipt, to: VerificationReceiptPayload, type: has_one, via: 'payload'}
+- {from: VerificationReceiptPayload, to: QuoteResponse, type: belongs_to, via: 'payment.quote_id'}
+- {from: SignedEvidence, to: VerificationKey, type: belongs_to, via: 'signature.kid -> VerificationKey.kid / Jwks.keys[].kid'}
+- {from: AgentManifest, to: VerificationKey, type: has_many, via: 'verification_keys'}
+- {from: AgentManifest, to: Price, type: has_one, via: 'payment'}
+- {from: X402Manifest, to: X402PaymentRequirement, type: has_many, via: 'resources[].accepts'}
+- {from: ErrorResponse, to: PaidVerificationBinding, type: has_one, via: 'error.details.paid_verification_binding (refused state)'}
+lifecycle_of_a_purchase:
+- 'VerificationPrecheckIntent -> POST /validate-request -> FreeRequestValidation (PrecheckReceipt.receipt_digest)'
+- 'PaidVerificationIntent (carrying that digest) -> POST /quote -> QuoteResponse (qte_, binding state quoted, expires_at)'
+- 'PaidVerificationIntent -> POST /verify-evidence -> 402 X402PaymentRequired (binding state payment_required) -> paid retry -> VerifyEvidenceResponse (txn_, binding state delivered) or ErrorResponse (binding state refused)'
+- 'SignedEvidence.signature.kid -> Jwks key -> offline Ed25519 verification of signed_payload_b64url'
+retrieval:
+  by_id: none — no GET exists for a quote, transaction, evidence or receipt; the delivery response is the only copy (recourse.receipt_retrieval and evidence_retrieval are null in the schema)
+  note: 'The provider states raw evidence is not retained; only digests and transaction metadata are stored in D1.'

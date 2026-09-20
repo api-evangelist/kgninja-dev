@@ -1,23 +1,218 @@
 aid: kgninja-dev
 name: KG-NINJA
-description: 'KG-NINJA is a company surfaced via the API Evangelist harvest backlog (source: a2a-registry)
-  and added to the network as a stub for full-pipeline profiling.'
+description: >-
+  KG-NINJA is the operator identity (GitHub user KG-NINJA, Osaka; Cloudflare Wallet handle @kgninja) behind
+  Agent Verification Utility at agent-economy.kgninja.dev, a Cloudflare Workers service (v0.4.3) that runs
+  bounded deterministic checks (SHA-256 equality, JSON Pointer existence/equality/type) over caller-supplied
+  inline JSON and returns an Ed25519-signed execution record, sold to agents per call
+  for 10000 atomic USDC ($0.01) on Base through x402 v2 with no account, API key or OAuth. One origin
+  exposes the product three ways — a 44-operation OpenAPI 3.1.0 contract at /openapi.json, a remote
+  Streamable HTTP MCP server at /mcp answering an anonymous tools/list (five tools, one paid), and an A2A 1.0
+  agent card at /.well-known/agent-card.json with JSON-RPC at /a2a — plus an RFC 9727 API catalog, an MCP
+  Registry server.json, a provider-published Agent Skill, a JWKS, an x402 manifest, llms.txt and
+  Content-Signal. The apex kgninja.dev has no A record; the subdomain is its only web presence.
 url: https://raw.githubusercontent.com/api-evangelist/kgninja-dev/refs/heads/main/apis.yml
+image: https://agent-economy.kgninja.dev/icon.svg
 x-type: company
 x-source: harvest:a2a-registry
-x-tier: stub
-x-tier-reason: harvest
+x-tier: profiled
+x-tier-reason: enrichment pass 2026-09-19 (local-v3; was a2a-registry harvest stub)
 specificationVersion: '0.20'
 created: '2026-09-19'
 modified: '2026-09-19'
 tags:
-- Company
-apis: []
+- Agents
+- Agent Commerce
+- A2A
+- MCP
+- x402
+- Verification
+- JSON
+- Cryptography
+- Cloudflare Workers
+- agent-native
+- Japan
+tags_raw:
+- Agents
+- Agent commerce
+- A2A
+- MCP
+- x402
+- Verification
+- JSON
+- Cryptography
+- Cloudflare Workers
+- Agent-native
+- Japan
+apis:
+- aid: kgninja-dev:agent-verification-utility-api
+  name: Agent Verification Utility API
+  image: https://agent-economy.kgninja.dev/icon.svg
+  description: >-
+    REST contract for the Agent Verification Utility: a free precheck (POST /validate-request) that binds a
+    verification request and an explicit spend policy into an unsigned receipt, a free quote (POST /quote,
+    Idempotency-Key required), and the paid execution route (POST /verify-evidence) that answers HTTP 402
+    with an x402 v2 PaymentRequired document and, on the paid retry, returns the deterministic result,
+    Ed25519-signed evidence, a delivery receipt and a fulfillment proof. The remaining operations are
+    discovery and operations surfaces — agent manifest, x402 manifest, RFC 9727 API catalog, AI catalog,
+    MCP server card and registry document, Agent Skills index, JWKS, health, public stats, revenue goal —
+    plus optional 15-minute anonymous agent registration. 44 operations, 47 component schemas, OpenAPI
+    3.1.0, served at https://agent-economy.kgninja.dev/openapi.json with servers[] "/" (relative to the
+    deployment origin).
+  humanURL: https://agent-economy.kgninja.dev/
+  baseURL: https://agent-economy.kgninja.dev
+  tags:
+  - Verification
+  - JSON
+  - x402
+  - Agent Commerce
+  - agent-native
+  properties:
+  - type: OpenAPI
+    url: openapi/kgninja-dev-openapi.json
+  - type: OpenAPI
+    name: OpenAPI (provider-hosted)
+    url: https://agent-economy.kgninja.dev/openapi.json
+  - type: Documentation
+    url: https://agent-economy.kgninja.dev/docs/deterministic-json-verification
+  - type: APIReference
+    url: https://agent-economy.kgninja.dev/openapi.json
+  - type: GettingStarted
+    url: https://agent-economy.kgninja.dev/index.md
+  - type: Overlay
+    url: overlays/kgninja-dev-openapi-overlay.yaml
+  - type: Conventions
+    url: conventions/kgninja-dev-conventions.yml
+  - type: ErrorCatalog
+    url: errors/kgninja-dev-problem-types.yml
+  - type: DataModel
+    url: data-model/kgninja-dev-data-model.yml
+- aid: kgninja-dev:agent-verification-utility-mcp-server
+  name: Agent Verification Utility MCP Server
+  image: https://agent-economy.kgninja.dev/icon.svg
+  description: >-
+    Remote Model Context Protocol server at https://agent-economy.kgninja.dev/mcp — stateless Streamable
+    HTTP, POST only (GET returns 405), serverInfo dev.kgninja/agent-verification-utility 0.4.3, protocol
+    version 2025-06-18 negotiated live and 2026-07-28 declared on the server card. initialize and tools/list
+    answer anonymously with five tools carrying real inputSchemas and MCP annotations: four free
+    (describe_verify_evidence, get_revenue_goal_status, quote_verify_evidence,
+    prepare_verify_evidence_purchase) and one paid (verify_evidence), whose unpaid call returns an x402 v2
+    PaymentRequired document in _meta["x402/error"] and is retried with _meta["x402/payment"].
+    resources/list and prompts/list are not implemented. Published alongside it: an MCP Registry
+    server.json, an experimental MCP Server Card, a Cloudflare Agent Readiness card at
+    /.well-known/mcp/server-card.json (aliased at /.well-known/mcp.json), a registry HTTP ownership proof
+    and a browser WebMCP bridge (webmcp.js).
+  humanURL: https://agent-economy.kgninja.dev/docs/mcp-x402-interoperability
+  baseURL: https://agent-economy.kgninja.dev/mcp
+  tags:
+  - MCP
+  - agent-native
+  - x402
+  properties:
+  - type: MCPServer
+    url: mcp/kgninja-dev-mcp.yml
+  - type: MCPServer
+    name: MCP endpoint (Streamable HTTP)
+    url: https://agent-economy.kgninja.dev/mcp
+  - type: ToolCrosswalk
+    url: mcp/kgninja-dev-tool-crosswalk.yml
+  - type: Documentation
+    url: https://agent-economy.kgninja.dev/docs/mcp-x402-interoperability
+- aid: kgninja-dev:agent-verification-utility-a2a-agent
+  name: Agent Verification Utility A2A Agent
+  image: https://agent-economy.kgninja.dev/icon.svg
+  description: >-
+    Agent2Agent (A2A) 1.0 surface: an agent card served from
+    https://agent-economy.kgninja.dev/.well-known/agent-card.json (supportedInterfaces[] JSONRPC at
+    https://agent-economy.kgninja.dev/a2a, protocolVersion 1.0, version 0.4.3, provider KG-NINJA) declaring
+    one skill, prepare-json-evidence-verification, which revalidates a prechecked paid intent, creates or
+    reuses an idempotent bound quote and returns exact x402 and MCP purchase instructions as a direct
+    Message. The adapter is stateless and synchronous: it never creates Tasks, never executes paid work, and
+    declares streaming, push notifications and extended cards unsupported. The endpoint enforces the
+    A2A-Version header (0.3 is rejected with -32009 VERSION_NOT_SUPPORTED; 1.0 is required).
+  humanURL: https://agent-economy.kgninja.dev/docs/mcp-x402-interoperability
+  baseURL: https://agent-economy.kgninja.dev/a2a
+  tags:
+  - A2A
+  - agent-native
+  - x402
+  properties:
+  - type: AgentCard
+    url: a2a/kgninja-dev-a2a.yml
+  - type: AgentCard
+    name: A2A Agent Card (provider-hosted)
+    url: https://agent-economy.kgninja.dev/.well-known/agent-card.json
 maintainers:
 - FN: Kin Lane
   email: kin@apievangelist.com
 - FN: APIs.json
   email: info@apis.io
 common:
+- type: DomainSecurity
+  url: security/kgninja-dev-domain-security.yml
+- type: AgenticAccess
+  url: agentic-access/kgninja-dev-agentic-access.yml
+- type: Authentication
+  url: authentication/kgninja-dev-authentication.yml
 - type: Website
-  url: https://kgninja.dev/
+  url: https://agent-economy.kgninja.dev/
+- type: Documentation
+  url: https://agent-economy.kgninja.dev/docs/deterministic-json-verification
+- type: GettingStarted
+  url: https://agent-economy.kgninja.dev/index.md
+- type: APIReference
+  url: https://agent-economy.kgninja.dev/openapi.json
+- type: FAQ
+  url: https://agent-economy.kgninja.dev/faq
+- type: Pricing
+  name: Published price (agent manifest payment block)
+  url: https://agent-economy.kgninja.dev/agent.json
+- type: GitHubOrganization
+  url: https://github.com/KG-NINJA
+- type: AgentCard
+  url: a2a/kgninja-dev-a2a.yml
+- type: MCPServer
+  url: mcp/kgninja-dev-mcp.yml
+- type: ToolCrosswalk
+  url: mcp/kgninja-dev-tool-crosswalk.yml
+- type: WellKnown
+  url: well-known/kgninja-dev-well-known.yml
+- type: APICatalog
+  url: well-known/kgninja-dev-api-catalog.json
+- type: ContentSignal
+  url: https://agent-economy.kgninja.dev/robots.txt
+- type: LLMsTxt
+  url: llms/kgninja-dev-llms.txt
+- type: LLMsTxt
+  name: llms.txt (provider-hosted)
+  url: https://agent-economy.kgninja.dev/llms.txt
+- type: AgentSkill
+  url: skills/_index.yml
+- type: AgentSkill
+  name: verify-json-evidence SKILL.md (provider-hosted)
+  url: https://agent-economy.kgninja.dev/.well-known/agent-skills/verify-json-evidence/SKILL.md
+- type: Conventions
+  url: conventions/kgninja-dev-conventions.yml
+- type: Idempotency
+  url: conventions/kgninja-dev-conventions.yml
+- type: ErrorCatalog
+  url: errors/kgninja-dev-problem-types.yml
+- type: DataModel
+  url: data-model/kgninja-dev-data-model.yml
+- type: RateLimits
+  url: rate-limits/kgninja-dev-rate-limits.yml
+- type: Plans
+  url: plans/kgninja-dev-plans-pricing.yml
+- type: Sandbox
+  url: sandbox/kgninja-dev-sandbox.yml
+- type: Conformance
+  url: conformance/kgninja-dev-conformance.yml
+- type: Lifecycle
+  url: lifecycle/kgninja-dev-lifecycle.yml
+- type: Overlay
+  url: overlays/kgninja-dev-openapi-overlay.yaml
+x-enrichment:
+  date: '2026-09-19'
+  status: enriched
+  artifacts_added: 37
+  pass: local-v3

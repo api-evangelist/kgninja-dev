@@ -1,0 +1,151 @@
+generated: '2026-09-19'
+method: probed
+source: https://agent-economy.kgninja.dev/.well-known/agent-card.json
+card:
+  file: a2a/kgninja-dev-agent-card.json
+discovery:
+  path: /.well-known/agent-card.json
+  canonical: true
+  host: agent-economy.kgninja.dev
+  note: >-
+    Served from the product host, which is also the OpenAPI origin (servers[] "/"), the MCP host (/mcp) and
+    the A2A JSON-RPC host (/a2a) — one Cloudflare Workers origin. The legacy /.well-known/agent.json returns
+    the host's real JSON 404 ({"error":{"code":"NOT_FOUND",...}}, 155 bytes), and a negative-control path
+    also 404s, so the 200 on agent-card.json is a served document and not a catch-all. The registrable domain
+    kgninja.dev has no A record and serves nothing. Ownership is not in question: provider.organization is
+    "KG-NINJA" with provider.url https://agent-economy.kgninja.dev, the OpenAPI on the same origin titles
+    itself "Agent Verification Utility" 0.4.3 (the card's version), the MCP server names itself
+    dev.kgninja/agent-verification-utility, and the card is listed as a service-desc in the host's own RFC
+    9727 catalog and in every response's Link header.
+x-evidence:
+  fetched: '2026-09-19'
+  url: https://agent-economy.kgninja.dev/.well-known/agent-card.json
+  http_status: 200
+  content_type: application/json; charset=utf-8
+  body_bytes: 1450
+  body_parses_as: JSON object with AgentCard shape (name, description, supportedInterfaces, provider, version, documentationUrl, iconUrl, capabilities, defaultInputModes, defaultOutputModes, securityRequirements, skills)
+  corroborating_probes:
+  - url: https://agent-economy.kgninja.dev/.well-known/agent.json
+    http_status: 404
+  - url: https://kgninja.dev/.well-known/agent-card.json
+    http_status: 0
+    note: Host does not resolve (no A/AAAA record).
+  - url: https://agent-economy.kgninja.dev/a2a
+    http_status: 405
+    note: GET on the declared JSON-RPC endpoint returns {"error":{"code":"METHOD_NOT_ALLOWED",...,"details":{"allowed":"POST"}}}. POST only, as the OpenAPI declares.
+  - url: https://agent-economy.kgninja.dev/a2a
+    method: POST
+    headers: none (no A2A-Version)
+    body: '{"jsonrpc":"2.0","id":1,"method":"message/send","params":{}}'
+    http_status: 200
+    response_header: 'a2a-version: 1.0'
+    response: '{"jsonrpc":"2.0","id":null,"error":{"code":-32009,"message":"A2A protocol version not supported","data":[{"@type":"type.googleapis.com/google.rpc.BadRequest","fieldViolations":[{"field":"A2A-Version","description":"Version 0.3 is not supported; use 1.0."}]},{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"VERSION_NOT_SUPPORTED","domain":"a2a-protocol.org","metadata":{"requestedVersion":"0.3","supportedVersions":"1.0"}}]}}'
+    note: A request without the A2A-Version header is treated as 0.3 and rejected; the responder speaks A2A 1.0 only and says so in a google.rpc-shaped error detail.
+  - url: https://agent-economy.kgninja.dev/a2a
+    method: POST
+    headers: 'A2A-Version: 1.0'
+    body: '{"jsonrpc":"2.0","id":1,"method":"GetTask","params":{"id":"apievangelist-nonexistent-probe"}}'
+    http_status: 200
+    response: '{"jsonrpc":"2.0","id":1,"error":{"code":-32001,"message":"Task not found","data":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"TASK_NOT_FOUND","domain":"a2a-protocol.org","metadata":{"taskId":"apievangelist-nonexistent-probe"}}]}}'
+    note: A real A2A responder — TaskNotFoundError (-32001) for an unknown task id, using the 1.0 method name GetTask (the 0.3 name tasks/get returns -32601 Method not found). No message was sent and nothing was purchased.
+  - url: https://agent-economy.kgninja.dev/a2a
+    method: POST
+    headers: 'A2A-Version: 1.0'
+    body: '{"jsonrpc":"2.0","id":1,"method":"ListTasks","params":{}}'
+    http_status: 200
+    response: '{"jsonrpc":"2.0","id":1,"result":{"tasks":[],"nextPageToken":"","pageSize":50,"totalSize":0}}'
+    note: Matches the contract's own description — "Because this adapter never creates A2A Tasks, ListTasks returns an empty collection while GetTask and CancelTask return TaskNotFoundError."
+  - url: https://a2aregistry.org
+    note: The card was first seen as one of 415 agents listed on a2aregistry.org (fetched 2026-09-19, author "KG-NINJA", agent "Agent Verification Utility"), which is how this provider entered the harvest backlog. The registry API answered 503 during this pass; the card above was fetched directly from the provider's host.
+agent_card:
+  name: Agent Verification Utility
+  description: >-
+    A stateless synchronous A2A adapter that validates a prechecked paid intent, creates or reuses a quote
+    bound to its receipt digest and spend policy, and returns exact x402 and MCP purchase instructions as a
+    direct Message. It does not create Tasks or execute paid work without payment.
+  url: https://agent-economy.kgninja.dev/a2a
+  version: 0.4.3
+  protocol_version: '1.0'
+  protocol_binding: JSONRPC
+  supported_interfaces:
+  - {url: https://agent-economy.kgninja.dev/a2a, protocolBinding: JSONRPC, protocolVersion: '1.0'}
+  provider:
+    organization: KG-NINJA
+    url: https://agent-economy.kgninja.dev
+  documentation_url: https://agent-economy.kgninja.dev/docs/mcp-x402-interoperability
+  icon_url: https://agent-economy.kgninja.dev/icon.svg
+  capabilities:
+    streaming: false
+    push_notifications: false
+    extended_agent_card: false
+  default_input_modes: [application/json]
+  default_output_modes: [application/json]
+  security_schemes: null
+  security_requirements: []
+  skill_count: 1
+  skills:
+  - id: prepare-json-evidence-verification
+    name: Prepare JSON evidence verification
+    tags: [json, verification, x402, quote]
+    input_modes: [application/json]
+    output_modes: [application/json]
+    example: 'Quote a deterministic check that /status equals ready in supplied JSON.'
+  skill_invocation: >-
+    SendMessage with one application/json DataPart carrying {idempotency_key, intent}, where intent is the
+    unchanged request + spend_policy from a successful free precheck plus its precheck_receipt_digest. The
+    returned Message carries a bound quote and the exact HTTP / MCP purchase instructions; paid execution is
+    a separate, explicit step through POST /verify-evidence or the MCP tool verify_evidence.
+conformance:
+  spec: A2A 1.0.0
+  grade: conformant
+  protocol_version: '1.0'
+  protocol_binding: JSONRPC
+  hard_checks:
+    capabilities_is_object: true
+    protocol_version_present: true
+    skills_is_array: true
+  optional_fields:
+    default_input_modes: true
+    default_output_modes: true
+    preferred_transport: not-applicable-in-1.0 (protocolBinding is carried per interface in supportedInterfaces[])
+  grade_basis: >-
+    Graded against the A2A 1.0.0 hard checks. capabilities is an OBJECT (pass) with streaming,
+    pushNotifications and extendedAgentCard. protocolVersion is present (pass) — carried where 1.0.0 places
+    it, on the interface entry in supportedInterfaces[] ("1.0"), rather than as the 0.3-era top-level field;
+    the live endpoint confirms the version by answering with an a2a-version: 1.0 header and by rejecting an
+    unversioned (0.3) request with VERSION_NOT_SUPPORTED. skills is an ARRAY (pass) of one fully populated
+    skill with id, name, description, tags, examples, inputModes, outputModes and securityRequirements.
+    defaultInputModes and defaultOutputModes are present. This is a 1.0.0-shaped card — supportedInterfaces[]
+    with protocolBinding, securityRequirements (the 1.0 name), capabilities.extendedAgentCard — and it is
+    internally consistent with that revision; the endpoint's 1.0 method names (GetTask, ListTasks) and error
+    codes (-32001, -32009) were verified live.
+  deviations:
+  - field: url / preferredTransport / protocolVersion (top-level)
+    observed: absent; replaced by supportedInterfaces[] with protocolBinding and per-interface protocolVersion
+    note: >-
+      Correct for A2A 1.0.0, which the card and the endpoint both declare. A reader written against A2A
+      0.3.0 looks for the top-level triple and will not find it. Recorded because both card shapes coexist
+      in the catalog, not as a fault.
+  - field: securitySchemes / securityRequirements
+    observed: securitySchemes absent; securityRequirements is an empty array at the card level and on the skill
+    note: >-
+      The card declares no authentication scheme, which is accurate: auth.md states the service is
+      intentionally anonymous and that OAuth metadata is deliberately not published. The gate on the paid
+      step is x402 payment, which the card does not declare as an extension (no capabilities.extensions[];
+      no a2a-x402 URI) — an agent learns the payment model from the skill description and from
+      documentationUrl, not from the card's security or extension fields.
+  - field: skills
+    observed: exactly one skill, and it is a quote-preparation skill, not the paid verification itself
+    note: >-
+      By design (the description says so): the A2A surface prepares a purchase and hands the agent to HTTP
+      or MCP for paid execution. It is the narrowest of the three surfaces on this host.
+  - field: signatures
+    observed: absent
+    note: No JWS signature block; the card's authenticity rests on TLS to agent-economy.kgninja.dev. (The provider does publish a JWKS, but for signing verification evidence, not the card.)
+surface_relationship:
+  note: >-
+    KG-NINJA publishes three agent surfaces on one host and they are projections of one product. A2A: one
+    skill at /a2a that prepares a bound quote. MCP: five tools at /mcp (four free, one paid) — see
+    mcp/kgninja-dev-mcp.yml. REST: 44 operations, of which POST /validate-request, POST /quote and POST
+    /verify-evidence are the flow every agent surface ultimately maps to — see
+    mcp/kgninja-dev-tool-crosswalk.yml.

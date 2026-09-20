@@ -1,0 +1,95 @@
+generated: '2026-09-19'
+method: derived
+source: >-
+  Derived by aligning the LIVE MCP tools/list (mcp/kgninja-dev-mcp-tools.json, 5 tools with inputSchema,
+  fetched anonymously 2026-09-19) and the A2A agent card's one skill with the provider's OpenAPI 3.1.0
+  (openapi/kgninja-dev-openapi.json, 44 operations). The provider's own server card and docs name the
+  backing routes for each tool, so most bindings are stated rather than inferred.
+purpose: >-
+  Make the MCP tool the first-class discovery unit and bind it to its backing REST operation. Three
+  surfaces (REST, MCP, A2A) project one product: the paid deterministic verification. MCP and A2A expose
+  only the purchase flow; the 38 discovery/operations/registration operations are REST-only.
+surfaces:
+  rest_openapi: openapi/kgninja-dev-openapi.json        # 44 operations, 47 schemas; servers[] "/" relative to https://agent-economy.kgninja.dev
+  mcp: https://agent-economy.kgninja.dev/mcp             # tools/list OPEN (anonymous 200); inputSchemas real
+  a2a: https://agent-economy.kgninja.dev/a2a             # one skill; GetTask/ListTasks verified live at A2A-Version 1.0
+  graphql: null
+crosswalk:
+- tool: describe_verify_evidence
+  category: discovery
+  rest: [getAgentManifest, getVerificationRecipes, getLandingPage]
+  binding: composite
+  confidence: medium
+  note: >-
+    Returns the product description, limits, endpoint map, free/paid tool split and the canonical offer — the
+    same facts the agent manifest (/agent.json), the recipes document and the landing page publish. No single
+    REST operation returns exactly this payload; the live tools/call result was compared field-by-field with
+    /agent.json (endpoints, constraints, operator_identity) and /validate-request's canonical_offer.
+- tool: get_revenue_goal_status
+  category: operations
+  rest: [getRevenueGoalStatus, getWellKnownRevenueGoalStatus]
+  binding: rest
+  confidence: high
+  note: The tool description and the OpenAPI description of GET /goal are the same sentence ("never changes price, spends funds, or sends messages").
+- tool: quote_verify_evidence
+  category: purchase
+  rest: [quoteVerifyEvidence]
+  binding: rest
+  confidence: high
+  note: >-
+    The tool's idempotency_key argument is the REST Idempotency-Key header (same 16-128 char pattern) and
+    intent is the PaidVerificationIntent request body. Both require a prior free precheck
+    (validateVerificationRequest) whose receipt digest travels in intent.precheck_receipt_digest.
+- tool: prepare_verify_evidence_purchase
+  category: purchase
+  rest: [quoteVerifyEvidence, verifyEvidence]
+  binding: composite
+  confidence: medium
+  note: >-
+    Creates or reuses the bound quote (quoteVerifyEvidence) and returns the exact HTTP request that will
+    produce the x402 challenge from verifyEvidence — a purchase-preparation composite with no dedicated
+    REST twin. It does not execute the paid route.
+- tool: verify_evidence
+  category: purchase
+  rest: [verifyEvidence]
+  binding: rest
+  confidence: high
+  note: >-
+    Stated by the provider: "The paid MCP tool uses x402 metadata and shares the audited POST
+    /verify-evidence settlement and D1 ledger path." Same intent body; the x402 challenge that REST returns
+    as HTTP 402 + PAYMENT-REQUIRED arrives here as a tool error with _meta["x402/error"], the PAYMENT-SIGNATURE
+    header becomes _meta["x402/payment"], and PAYMENT-RESPONSE becomes _meta["x402/payment-response"].
+a2a_crosswalk:
+- skill: prepare-json-evidence-verification
+  rest: [quoteVerifyEvidence]
+  mcp: [quote_verify_evidence, prepare_verify_evidence_purchase]
+  binding: rest
+  confidence: high
+  note: >-
+    The A2A SendMessage carries the same {idempotency_key, intent} DataPart and "creates or reuses an
+    idempotent bound quote and returns exact x402 and MCP purchase instructions" — the A2A twin of
+    prepare_verify_evidence_purchase. Paid execution is never performed over A2A.
+mcp_only: []
+rest_only:
+- capability: free precheck (decision support)
+  operations: [validateVerificationRequest]
+  note: The precheck that every paid flow depends on is REST-only — MCP and A2A callers must POST /validate-request first to obtain the receipt digest. The provider states this in SKILL.md and the interoperability guide.
+- capability: discovery documents
+  operations: [getLandingPage, getAuthenticationGuide, getA2aAgentCard, getWellKnownOpenApi, getMcpRegistryServer, getMcpRegistryServerAlias, getMcpRegistryHttpProof, getWebMcpBridge, getIndexNowOwnershipKey, getWellKnownVerificationRecipes, getAgentManifest, getX402Manifest, getApiCatalog, getAiCatalog, getCurrentMcpServerCard, getAgentReadinessMcpServerCard, getMcpServerCardCompatibilityAlias, getAgentSkillsIndex, getVerifyJsonEvidenceSkill, getEvidenceJwks, getLlmsIndex, getLlmsFullIndex, getMarkdownServiceGuide, getServiceIcon, getRobots, getSitemap, getOpenApi]
+- capability: documentation
+  operations: [getDeterministicVerificationGuide, getReproducibleReceiptGuide, getMcpX402InteroperabilityGuide, getSecurityTrustGuide, getFrequentlyAskedQuestions]
+- capability: operations / health
+  operations: [getHealth, getPublicStats]
+- capability: optional anonymous registration
+  operations: [registerAnonymousAgent, getAnonymousAgentRegistration]
+- capability: protocol transports (described in the REST contract as operations)
+  operations: [mcpStreamableHttp, sendA2aMessage]
+coverage:
+  mcp_tools_named: 5
+  mcp_tools_bound: 5
+  mcp_only: 0
+  a2a_skills_named: 1
+  a2a_skills_bound: 1
+  rest_operations_total: 44
+  rest_operations_with_tool: 6
+  rest_only_operations: 38

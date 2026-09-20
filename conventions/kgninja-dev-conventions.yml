@@ -1,0 +1,202 @@
+generated: '2026-09-19'
+method: searched
+source: https://agent-economy.kgninja.dev/openapi.json
+derived_from: openapi/kgninja-dev-openapi.json
+docs:
+- https://agent-economy.kgninja.dev/auth.md
+- https://agent-economy.kgninja.dev/index.md
+- https://agent-economy.kgninja.dev/docs/reproducible-x402-receipts
+- https://agent-economy.kgninja.dev/docs/mcp-x402-interoperability
+- https://agent-economy.kgninja.dev/docs/security-and-trust
+base_url: https://agent-economy.kgninja.dev
+media_type: application/json
+description: >-
+  How the Agent Verification Utility behaves across its operations: an anonymous access model gated by
+  payment rather than credentials, a required Idempotency-Key on the quote route (and idempotency_key on
+  every MCP purchase tool) with a 409 on divergent reuse, a free precheck that is the contract's dry-run,
+  no reversal path once a paid verification settles, a single JSON error envelope with a request id in
+  body and header, x402 v2 payment headers, RFC 8288 Link discovery on every response, Accept-negotiated
+  Markdown for the docs pages, and 429 + Retry-After rate-limit signalling with unpublished numbers.
+auth:
+  style: >-
+    Anonymous by design. No account, API key, OAuth, OIDC, cookie or session is required for discovery,
+    documentation, health, stats, quotes, MCP tools/list or the four free MCP tools. The only
+    securityScheme in the contract (agentRegistration, http bearer) protects one read — GET
+    /agent/registration — using an optional 15-minute receipt issued by POST /agent/register; it "grants no
+    API access and does not authorize payment". Paid execution is authorized per request by an x402 v2
+    payment signature (PAYMENT-SIGNATURE header or _meta["x402/payment"]), which "is not a reusable
+    application credential ... and does not create an authenticated session".
+  detail: authentication/kgninja-dev-authentication.yml
+idempotency:
+  supported: true
+  coverage: partial
+  mechanism: Idempotency-Key request header (REST /quote) and idempotency_key argument (MCP purchase tools, A2A DataPart)
+  header: Idempotency-Key
+  key_format: 16-128 characters matching ^[A-Za-z0-9_-]+$ (a UUID qualifies); required
+  scope:
+  - quoteVerifyEvidence
+  - mcp:quote_verify_evidence
+  - mcp:prepare_verify_evidence_purchase
+  - mcp:verify_evidence
+  - a2a:prepare-json-evidence-verification
+  not_covered:
+  - verifyEvidence
+  - registerAnonymousAgent
+  conflict_behavior: >-
+    "Stable key for one logical quote request. Reusing it with a different request hash returns 409"
+    (components.parameters.IdempotencyKey). The receipts guide: "An idempotency key is bound to a canonical
+    request. Retrying the same delivered purchase returns the same transaction instead of creating duplicate
+    revenue or cost events. Reusing an idempotency key with different content fails."
+  retention: 'Not stated as a duration. Quotes carry expires_at / quote_expires_at (duration unpublished); "Quotes expire, but completed transaction records remain auditable."'
+  description: >-
+    The mechanism spans the money-bearing surface on MCP and A2A (every purchase tool and the A2A skill
+    require the key) and the quote route on REST, but NOT the REST purchase route itself: POST
+    /verify-evidence declares no Idempotency-Key parameter. Its replay safety comes from a different
+    binding — the request is tied to a bound quote (X-Quote-ID, or the quote the server creates from the
+    complete intent) and "a paid retry identifies the generated bound quote from the signed payment
+    payload", so a re-sent paid body settles against the same quote rather than a second one. Coverage is
+    therefore partial, not full: 4 of the 6 write surfaces carry a documented key, the REST purchase route
+    relies on quote binding, and the optional registration POST has no replay protection at all (the
+    receipt it issues is harmless by design).
+  observed: 'POST /quote with an empty body and no header answered 400 INVALID_IDEMPOTENCY_KEY "Idempotency-Key must contain 16-128 URL-safe characters" before validating anything else.'
+dry_run_mode:
+  supported: true
+  status: documented
+  mechanism: dedicated free routes, not a parameter on the destructive operation
+  surfaces:
+  - operation: validateVerificationRequest
+    route: POST /validate-request
+    cost: free; no key, no payment
+    description: >-
+      Quoted from the contract: "performs no external fetch, creates no quote, transaction, or payment,
+      executes no assertion, returns no signed evidence, and retains or logs no raw evidence." It returns
+      the same canonical offer and an unsigned precheck receipt whose digest the paid intent must carry, so
+      the paid call cannot be made without first rehearsing it. Observed live with an empty body: HTTP 400
+      with reason_code INVALID_REQUEST_SCHEMA and the canonical offer attached.
+  - operation: quoteVerifyEvidence
+    route: POST /quote
+    cost: free
+    description: Economic preflight after the precheck — returns the bound quote, exact price, expiry and the purchase instructions without executing.
+  - operation: mcp:describe_verify_evidence, mcp:quote_verify_evidence, mcp:prepare_verify_evidence_purchase
+    cost: free
+    description: The MCP twins — describe limits, obtain a quote, and obtain the exact HTTP request that will produce the 402, all without paying.
+  note: >-
+    The paid operation (verifyEvidence / verify_evidence) exposes no dry_run, simulate or preview parameter
+    of its own; the x402 manifest states simulation false and mockMode false. The rehearsal is a mandatory
+    separate step, which the provider frames as "Do not pay mechanically."
+reversibility:
+  grade: none
+  write_surface: true
+  docs: https://agent-economy.kgninja.dev/docs/reproducible-x402-receipts
+  note: >-
+    A write surface exists — POST /verify-evidence and the MCP tool verify_evidence spend real USDC — and no
+    reversal operation exists for it: the contract has no refund, cancel, void or reverse operation, and
+    the receipt's own recourse block says so in schema (recourse.re_evaluation_supported true,
+    recourse.re_evaluation_requires_new_payment true, recourse.supersession_supported false,
+    receipt_retrieval and evidence_retrieval null). The provider's stated recourse is to run the check again
+    for a new payment. No window is stated anywhere because there is nothing to exercise inside one. Grade
+    is none, not na: the hazard is real ($0.01 per call, settled on-chain) and the absence is the finding.
+  write_surfaces:
+  - operation: verifyEvidence
+    also: mcp:verify_evidence
+    action: Settle an x402 payment (10000 atomic USDC on Base) and execute deterministic checks
+    reversal: none
+    reversal_operation: null
+    window: null
+    grade: none
+    stated_terms:
+    - source: openapi VerificationReceiptPayload.recourse
+      verbatim: 're_evaluation_supported: const true; re_evaluation_requires_new_payment: const true; supersession_supported: const false; receipt_retrieval: null; evidence_retrieval: null'
+    - source: https://agent-economy.kgninja.dev/docs/reproducible-x402-receipts
+      verbatim: 'Retrying the same delivered purchase returns the same transaction instead of creating duplicate revenue or cost events.'
+    - source: https://agent-economy.kgninja.dev/docs/security-and-trust
+      verbatim: 'The service does not ... custody user funds, or authorize payments on the caller''s behalf. Payment approval remains the calling agent''s policy decision.'
+    note: The provider's safety model is entirely pre-commit (precheck, bound quote, explicit payment approval, expiry, maxTimeoutSeconds 300); post-commit there is no undo.
+  - operation: quoteVerifyEvidence
+    also: mcp:quote_verify_evidence, mcp:prepare_verify_evidence_purchase, a2a:prepare-json-evidence-verification
+    action: Create or reuse a bound quote (a D1 write, free)
+    reversal: none needed — quotes expire on their own (expires_at; duration unpublished) and cost nothing
+    grade: na
+  - operation: registerAnonymousAgent
+    action: Issue a 15-minute anonymous registration receipt
+    reversal: none — "There is no revocation endpoint because the receipt has no application privileges and expires after 15 minutes; discard it to stop using it." (auth.md)
+    window: 15 minutes (expiry, not a reversal window)
+    grade: na
+    note: Nothing to reverse; the credential carries no privilege.
+payment:
+  protocol: x402 v2, scheme exact
+  price: 10000 atomic USDC ($0.01) per verify_evidence / POST /verify-evidence
+  network: eip155:8453 (Base); eip155:84532 (Base Sepolia) appears in schema enums but the served terms name 8453 only
+  asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 (USDC, 6 decimals)'
+  pay_to: '0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3'
+  max_timeout_seconds: 300
+  rest_headers:
+    challenge: 'HTTP 402 with PAYMENT-REQUIRED response header and an X402PaymentRequired JSON body (x402Version 2, accepts[], extensions incl. bazaar, paid_verification_binding)'
+    payment: 'PAYMENT-SIGNATURE request header — "Base64-encoded x402 v2 payment payload, supplied on the paid retry"'
+    settlement_proof: 'PAYMENT-RESPONSE response header on the 200'
+    quote_binding: 'X-Quote-ID request header (optional; the signed payload identifies the bound quote when omitted)'
+  mcp_meta_keys: ['x402/error (challenge, in a tool error)', 'x402/payment (retry)', 'x402/payment-response (settlement proof)']
+  precheck_binding: The paid intent must carry precheck_receipt_digest from POST /validate-request; the paid route recomputes the receipt and refuses stale or incompatible discovery with 409 before creating a quote.
+error_envelope:
+  media_type: application/json
+  shape: '{ "error": { "code": UPPER_SNAKE, "message": string, "request_id": "req_<uuid>", "retryable": boolean, "details"?: object } }'
+  rfc9457: false
+  detail: errors/kgninja-dev-problem-types.yml
+request_id_tracing:
+  supported: true
+  response_header: X-Request-ID
+  body_field: error.request_id (errors); request_id (quotes, precheck failures)
+  format: 'req_<uuid v4>'
+  observed: 'x-request-id: req_2f156f63-2912-4435-b25c-bc1ef4c47eb0 on the MCP initialize response; every error body carried a matching req_ id.'
+  note: 'No client-supplied request id header is documented; the id is server-issued. Every other identifier is prefixed too — qte_ (quote), pqt_ (machine quote), txn_, evd_, rcpt_, and "sha256:" for digests.'
+versioning:
+  scheme: semantic version in documents and the X-Service-Version response header; unversioned paths
+  current: 0.4.3
+  detail: lifecycle/kgninja-dev-lifecycle.yml
+pagination:
+  style: none
+  note: No list endpoint exists on REST; the one collection method, A2A ListTasks, returns {tasks[], nextPageToken, pageSize 50, totalSize} and is always empty because the adapter never creates Tasks.
+filtering_and_sorting: {supported: false}
+field_expansion: {supported: false}
+sparse_fieldsets: {supported: false}
+metadata: {supported: false}
+content_negotiation:
+  supported: true
+  mechanism: Accept header on the documentation routes
+  representations: [text/html, text/markdown]
+  headers: ['Vary: Accept', 'ETag', 'X-Markdown-Tokens (approximate token count of the Markdown representation)']
+  observed: 'GET /faq with Accept: text/markdown returned 200 text/markdown (the FAQ as Markdown); without it, text/html. Every docs page ends with "Request this page with Accept: text/markdown for the agent-optimized representation."'
+discovery_links:
+  mechanism: RFC 8288 Link response header on every response
+  observed: '</.well-known/api-catalog>; rel="api-catalog", </.well-known/agent-card.json>; rel="service-desc"; type="application/json", </.well-known/ai-catalog.json>; rel="service-desc"; type="application/ai-catalog+json", </mcp/server-card>; rel="service-desc"; type="application/mcp-server-card+json", </server.json>; rel="service-desc", </.well-known/agent-skills/index.json>; rel="service-desc", </verification-recipes.json>; rel="service-desc", </openapi.json>; rel="service-desc", </auth.md>; rel="service-doc"; type="text/markdown", </.well-known/revenue-goal.json>; rel="service-desc", </index.md>; rel="alternate"; type="text/markdown"'
+  detail: well-known/kgninja-dev-well-known.yml
+caching:
+  openapi: 'Cache-Control: public, max-age=3600, s-maxage=3600, stale-while-revalidate=3600; ETag'
+  discovery_documents: ETag + 304 on /.well-known/ai-catalog.json and /mcp/server-card
+  health_and_goal: Cache-Control header declared on getHealth and getRevenueGoalStatus 200s
+cors:
+  allow_origin: '*'
+  allow_methods: [GET, POST, DELETE, OPTIONS]
+  allow_headers: [Content-Type, Accept, Authorization, mcp-session-id, MCP-Protocol-Version, Mcp-Method, Mcp-Name]
+  expose_headers: [A2A-Version, ETag, Link, PAYMENT-REQUIRED, PAYMENT-RESPONSE, Retry-After, X-Request-ID, X-Service-Version]
+  max_age: 86400
+security_headers:
+  observed: ['strict-transport-security: max-age=31536000', 'x-content-type-options: nosniff', 'x-frame-options: DENY', 'referrer-policy: no-referrer', 'permissions-policy: camera=(), microphone=(), geolocation=()', 'cross-origin-resource-policy: cross-origin', 'content-signal: ai-train=no, search=yes, ai-input=yes']
+rate_limit_signaling:
+  status_on_exhaustion: 429
+  headers: [Retry-After]
+  limits_published: false
+  detail: rate-limits/kgninja-dev-rate-limits.yml
+request_bounds:
+  decoded_evidence_bytes: 65536
+  content_base64_max_length: 87384
+  assertions: 1-16
+  client_request_id: '1-64 chars, ^[A-Za-z0-9._:-]+$'
+  idempotency_key: '16-128 chars, ^[A-Za-z0-9_-]+$'
+  evidence_media_type: application/json only
+  status_when_exceeded: 413
+protocol_surfaces:
+  rest: https://agent-economy.kgninja.dev (OpenAPI 3.1.0, 44 operations)
+  mcp: https://agent-economy.kgninja.dev/mcp (Streamable HTTP, POST only)
+  a2a: https://agent-economy.kgninja.dev/a2a (JSON-RPC, A2A-Version 1.0 header required)
+  detail: mcp/kgninja-dev-tool-crosswalk.yml

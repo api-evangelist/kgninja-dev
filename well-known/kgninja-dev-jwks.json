@@ -1,0 +1,1 @@
+{"keys":[{"kty":"OKP","crv":"Ed25519","x":"jxFg-Knas1Y45NXpgujsqw7dpVN1NnBPrahXxwffWNo","alg":"EdDSA","use":"sig","key_ops":["verify"],"kid":"https://agent-economy.kgninja.dev/agent.json#evidence-key-1"}]}

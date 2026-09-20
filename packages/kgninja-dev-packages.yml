@@ -1,0 +1,22 @@
+generated: '2026-09-19'
+method: searched
+source: registry searches 2026-09-19
+package_count: 0
+packages: []
+searched:
+- {registry: npm, query: 'https://registry.npmjs.org/-/v1/search?text=kgninja', result: 0 packages}
+- {registry: pypi, query: 'https://pypi.org/pypi/kgninja/json', status: 404}
+- {registry: crates.io, query: 'https://crates.io/api/v1/crates?q=kgninja', result: 0 crates}
+- {registry: github-code, query: 'search/code?q=agent-economy.kgninja.dev+user:KG-NINJA', result: 0 hits — the service source is not in a public repository of the operator}
+- {registry: github-repos, query: 'search/repositories?q=user:KG-NINJA+agent-economy (and +x402, +mcp)', result: 'no repository for this service; the user KG-NINJA (183 public repos, Osaka) holds unrelated projects'}
+not_packages:
+- what: https://agent-economy.kgninja.dev/server.json
+  why: An MCP Registry publication document (remotes[] streamable-http), not a distributable package. Recorded in mcp/kgninja-dev-server.json.
+- what: https://agent-economy.kgninja.dev/webmcp.js
+  why: A same-origin, feature-detected browser WebMCP bridge script served by the site itself, not published to any registry or CDN. Recorded under web_mcp in mcp/kgninja-dev-mcp.yml.
+note: >-
+  KG-NINJA publishes no client library, SDK or CLI in any registry searched, and none of its documentation
+  references one — the documented ways in are raw HTTP against the OpenAPI, MCP Streamable HTTP, and A2A
+  JSON-RPC, each with an x402-capable client for the paid step. The "operator goal CLI" named in
+  /.well-known/revenue-goal.json is an operator-side tool that is not published. No Packages or SDKs pointer
+  is emitted.

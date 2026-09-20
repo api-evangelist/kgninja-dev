@@ -1,0 +1,668 @@
+{
+  "result": {
+    "tools": [
+      {
+        "name": "describe_verify_evidence",
+        "title": "Describe Agent Verification Utility",
+        "description": "Describe when deterministic verification is useful, when it is not, free request validation, recipes, limits, and the explicit paid MCP path.",
+        "inputSchema": {
+          "type": "object",
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "properties": {}
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "get_revenue_goal_status",
+        "title": "Get Revenue Goal Status",
+        "description": "Read the active revenue goal, measured funnel, contribution margin, and the next bounded improvement recommendation. This tool never changes price, spends funds, or sends messages.",
+        "inputSchema": {
+          "type": "object",
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "properties": {}
+        },
+        "annotations": {
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "quote_verify_evidence",
+        "title": "Quote Verification",
+        "description": "Validate a complete verification request and return a free quote when the margin policy passes.",
+        "inputSchema": {
+          "type": "object",
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "properties": {
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_-]+$"
+            },
+            "intent": {
+              "type": "object",
+              "properties": {
+                "request": {
+                  "type": "object",
+                  "properties": {
+                    "client_request_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[A-Za-z0-9._:-]+$"
+                    },
+                    "evidence": {
+                      "type": "object",
+                      "properties": {
+                        "media_type": {
+                          "type": "string",
+                          "const": "application/json"
+                        },
+                        "content_base64": {
+                          "type": "string",
+                          "minLength": 4,
+                          "maxLength": 87384
+                        }
+                      },
+                      "required": [
+                        "media_type",
+                        "content_base64"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "assertions": {
+                      "minItems": 1,
+                      "maxItems": 16,
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "const": "sha256_equals"
+                              },
+                              "expected_hex": {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{64}$"
+                              }
+                            },
+                            "required": [
+                              "op",
+                              "expected_hex"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "const": "json_pointer_exists"
+                              },
+                              "path": {
+                                "type": "string",
+                                "maxLength": 512
+                              }
+                            },
+                            "required": [
+                              "op",
+                              "path"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "const": "json_pointer_equals"
+                              },
+                              "path": {
+                                "type": "string",
+                                "maxLength": 512
+                              },
+                              "expected": {}
+                            },
+                            "required": [
+                              "op",
+                              "path",
+                              "expected"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "const": "json_type_is"
+                              },
+                              "path": {
+                                "type": "string",
+                                "maxLength": 512
+                              },
+                              "expected_type": {
+                                "type": "string",
+                                "enum": [
+                                  "null",
+                                  "boolean",
+                                  "number",
+                                  "string",
+                                  "array",
+                                  "object"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "op",
+                              "path",
+                              "expected_type"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "client_request_id",
+                    "evidence",
+                    "assertions"
+                  ],
+                  "additionalProperties": false
+                },
+                "spend_policy": {
+                  "type": "object",
+                  "properties": {
+                    "policy_version": {
+                      "type": "string",
+                      "const": "agent-economy/precheck-policy/2.0"
+                    },
+                    "max_amount_atomic": {
+                      "type": "string"
+                    },
+                    "network": {
+                      "type": "string",
+                      "enum": [
+                        "eip155:84532",
+                        "eip155:8453"
+                      ]
+                    },
+                    "asset": {
+                      "type": "string",
+                      "pattern": "^0x[a-fA-F0-9]{40}$"
+                    },
+                    "pay_to": {
+                      "type": "string",
+                      "pattern": "^0x[a-fA-F0-9]{40}$"
+                    }
+                  },
+                  "required": [
+                    "policy_version",
+                    "max_amount_atomic",
+                    "network",
+                    "asset",
+                    "pay_to"
+                  ],
+                  "additionalProperties": false
+                },
+                "precheck_receipt_digest": {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}$"
+                }
+              },
+              "required": [
+                "request",
+                "spend_policy",
+                "precheck_receipt_digest"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "idempotency_key",
+            "intent"
+          ]
+        },
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "prepare_verify_evidence_purchase",
+        "title": "Prepare HTTP Purchase",
+        "description": "After a successful free precheck, create or reuse a bound quote and return the exact HTTP request that will produce the x402 challenge. Do not pay until the binding, price, network, asset, payTo, and expiry match local policy.",
+        "inputSchema": {
+          "type": "object",
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "properties": {
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_-]+$"
+            },
+            "intent": {
+              "type": "object",
+              "properties": {
+                "request": {
+                  "type": "object",
+                  "properties": {
+                    "client_request_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[A-Za-z0-9._:-]+$"
+                    },
+                    "evidence": {
+                      "type": "object",
+                      "properties": {
+                        "media_type": {
+                          "type": "string",
+                          "const": "application/json"
+                        },
+                        "content_base64": {
+                          "type": "string",
+                          "minLength": 4,
+                          "maxLength": 87384
+                        }
+                      },
+                      "required": [
+                        "media_type",
+                        "content_base64"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "assertions": {
+                      "minItems": 1,
+                      "maxItems": 16,
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "const": "sha256_equals"
+                              },
+                              "expected_hex": {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{64}$"
+                              }
+                            },
+                            "required": [
+                              "op",
+                              "expected_hex"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "const": "json_pointer_exists"
+                              },
+                              "path": {
+                                "type": "string",
+                                "maxLength": 512
+                              }
+                            },
+                            "required": [
+                              "op",
+                              "path"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "const": "json_pointer_equals"
+                              },
+                              "path": {
+                                "type": "string",
+                                "maxLength": 512
+                              },
+                              "expected": {}
+                            },
+                            "required": [
+                              "op",
+                              "path",
+                              "expected"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "const": "json_type_is"
+                              },
+                              "path": {
+                                "type": "string",
+                                "maxLength": 512
+                              },
+                              "expected_type": {
+                                "type": "string",
+                                "enum": [
+                                  "null",
+                                  "boolean",
+                                  "number",
+                                  "string",
+                                  "array",
+                                  "object"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "op",
+                              "path",
+                              "expected_type"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "client_request_id",
+                    "evidence",
+                    "assertions"
+                  ],
+                  "additionalProperties": false
+                },
+                "spend_policy": {
+                  "type": "object",
+                  "properties": {
+                    "policy_version": {
+                      "type": "string",
+                      "const": "agent-economy/precheck-policy/2.0"
+                    },
+                    "max_amount_atomic": {
+                      "type": "string"
+                    },
+                    "network": {
+                      "type": "string",
+                      "enum": [
+                        "eip155:84532",
+                        "eip155:8453"
+                      ]
+                    },
+                    "asset": {
+                      "type": "string",
+                      "pattern": "^0x[a-fA-F0-9]{40}$"
+                    },
+                    "pay_to": {
+                      "type": "string",
+                      "pattern": "^0x[a-fA-F0-9]{40}$"
+                    }
+                  },
+                  "required": [
+                    "policy_version",
+                    "max_amount_atomic",
+                    "network",
+                    "asset",
+                    "pay_to"
+                  ],
+                  "additionalProperties": false
+                },
+                "precheck_receipt_digest": {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}$"
+                }
+              },
+              "required": [
+                "request",
+                "spend_policy",
+                "precheck_receipt_digest"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "idempotency_key",
+            "intent"
+          ]
+        },
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        }
+      },
+      {
+        "name": "verify_evidence",
+        "title": "Verify Evidence (paid)",
+        "description": "Run deterministic checks and return Ed25519-signed evidence after one explicitly authorized x402 payment. A free precheck receipt and a matching bound payment requirement are required before signing.",
+        "inputSchema": {
+          "type": "object",
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "properties": {
+            "idempotency_key": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_-]+$"
+            },
+            "intent": {
+              "type": "object",
+              "properties": {
+                "request": {
+                  "type": "object",
+                  "properties": {
+                    "client_request_id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[A-Za-z0-9._:-]+$"
+                    },
+                    "evidence": {
+                      "type": "object",
+                      "properties": {
+                        "media_type": {
+                          "type": "string",
+                          "const": "application/json"
+                        },
+                        "content_base64": {
+                          "type": "string",
+                          "minLength": 4,
+                          "maxLength": 87384
+                        }
+                      },
+                      "required": [
+                        "media_type",
+                        "content_base64"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "assertions": {
+                      "minItems": 1,
+                      "maxItems": 16,
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "const": "sha256_equals"
+                              },
+                              "expected_hex": {
+                                "type": "string",
+                                "pattern": "^[a-f0-9]{64}$"
+                              }
+                            },
+                            "required": [
+                              "op",
+                              "expected_hex"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "const": "json_pointer_exists"
+                              },
+                              "path": {
+                                "type": "string",
+                                "maxLength": 512
+                              }
+                            },
+                            "required": [
+                              "op",
+                              "path"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "const": "json_pointer_equals"
+                              },
+                              "path": {
+                                "type": "string",
+                                "maxLength": 512
+                              },
+                              "expected": {}
+                            },
+                            "required": [
+                              "op",
+                              "path",
+                              "expected"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "type": "string",
+                                "const": "json_type_is"
+                              },
+                              "path": {
+                                "type": "string",
+                                "maxLength": 512
+                              },
+                              "expected_type": {
+                                "type": "string",
+                                "enum": [
+                                  "null",
+                                  "boolean",
+                                  "number",
+                                  "string",
+                                  "array",
+                                  "object"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "op",
+                              "path",
+                              "expected_type"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "client_request_id",
+                    "evidence",
+                    "assertions"
+                  ],
+                  "additionalProperties": false
+                },
+                "spend_policy": {
+                  "type": "object",
+                  "properties": {
+                    "policy_version": {
+                      "type": "string",
+                      "const": "agent-economy/precheck-policy/2.0"
+                    },
+                    "max_amount_atomic": {
+                      "type": "string"
+                    },
+                    "network": {
+                      "type": "string",
+                      "enum": [
+                        "eip155:84532",
+                        "eip155:8453"
+                      ]
+                    },
+                    "asset": {
+                      "type": "string",
+                      "pattern": "^0x[a-fA-F0-9]{40}$"
+                    },
+                    "pay_to": {
+                      "type": "string",
+                      "pattern": "^0x[a-fA-F0-9]{40}$"
+                    }
+                  },
+                  "required": [
+                    "policy_version",
+                    "max_amount_atomic",
+                    "network",
+                    "asset",
+                    "pay_to"
+                  ],
+                  "additionalProperties": false
+                },
+                "precheck_receipt_digest": {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}$"
+                }
+              },
+              "required": [
+                "request",
+                "spend_policy",
+                "precheck_receipt_digest"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "idempotency_key",
+            "intent"
+          ]
+        },
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "_meta": {
+          "agents-x402/paymentRequired": true,
+          "agents-x402/priceUSD": 0.01
+        }
+      }
+    ]
+  },
+  "jsonrpc": "2.0",
+  "id": 1
+}

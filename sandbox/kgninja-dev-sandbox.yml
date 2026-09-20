@@ -1,0 +1,80 @@
+generated: '2026-09-19'
+method: searched
+source: https://agent-economy.kgninja.dev/verification-recipes.json
+docs:
+- https://agent-economy.kgninja.dev/.well-known/agent-skills/verify-json-evidence/SKILL.md
+- https://agent-economy.kgninja.dev/docs/deterministic-json-verification
+- https://agent-economy.kgninja.dev/.well-known/x402
+probed:
+- {url: 'https://agent-economy.kgninja.dev/validate-request', method: POST, body: '{}', status: 400, fetched: '2026-09-19', note: 'reason_code INVALID_REQUEST_SCHEMA with the canonical offer attached — the free precheck is live and answers without any credential'}
+- {url: 'https://agent-economy.kgninja.dev/quote', method: POST, body: '{}', status: 400, fetched: '2026-09-19', note: 'INVALID_IDEMPOTENCY_KEY — the free quote route is live'}
+- {url: 'https://agent-economy.kgninja.dev/verify-evidence', method: POST, body: '{}', status: 409, fetched: '2026-09-19', note: 'PRECHECK_REQUIRED — the paid route refuses to create a quote or a 402 without a precheck; no payment path was exercised'}
+- {url: 'https://agent-economy.kgninja.dev/mcp', method: POST, body: 'tools/call describe_verify_evidence {}', status: 200, fetched: '2026-09-19', note: 'the free read-only MCP tool answered with limits and the canonical offer'}
+summary: >-
+  There is no separate test environment, no test-mode key and no simulated payment: production is the
+  only host, and the x402 manifest states simulation false and mockMode false. What KG-NINJA publishes
+  instead is a rehearsal surface that is mandatory rather than optional — a free precheck whose receipt
+  digest the paid call must carry, a free quote, four free MCP tools — plus provider-authored fixtures: three
+  verification recipes each carrying a literally-submittable precheck_intent_example, the SKILL.md worked
+  example, and the x402 manifest's bazaar example_usage. A testnet chain id (Base Sepolia, eip155:84532) is
+  enumerated in the contract's network enums, but no page says that testnet payments are accepted.
+test_vs_live:
+  separate_environment: false
+  key_prefixes: not applicable — no keys are issued
+  simulation: false
+  mock_mode: false
+  source: 'well-known/kgninja-dev-x402.json: "simulation": false, "simulation_notice": null; accepts[].extra.mockMode false'
+  testnet:
+    declared: eip155:84532 (Base Sepolia) in Price.network, VerificationSpendPolicy.network, X402PaymentRequirement.network and the MCP tool inputSchemas
+    served: eip155:8453 only (x402 manifest accepts[], canonical offer, agent.json payment)
+    note: 'Declared in schema, not offered on any served terms; whether the facilitator would settle an eip155:84532 payment is not stated anywhere found. Recorded as declared and unverified — not as a sandbox.'
+dry_run:
+  operation: validateVerificationRequest
+  route: POST /validate-request
+  cost: free — no key and no payment
+  behaviour: >-
+    "This endpoint performs no external fetch, creates no quote, transaction, or payment, executes no
+    assertion, returns no signed evidence, and retains or logs no raw evidence." It validates the request
+    and the spend policy and returns an unsigned PrecheckReceipt (schema agent-economy/precheck-receipt/2.0)
+    whose receipt_digest must be copied into the paid intent; the paid route recomputes it.
+  guarantee: 'SKILL.md: "A successful precheck creates no quote or transaction, calls no Verification Core, executes no assertion, and returns no signed evidence."'
+  mandatory: true — verifyEvidence answers 409 PRECHECK_REQUIRED without it
+  also_free: [quoteVerifyEvidence (POST /quote), mcp:describe_verify_evidence, mcp:quote_verify_evidence, mcp:prepare_verify_evidence_purchase, a2a:prepare-json-evidence-verification]
+fixtures:
+  verification_recipes:
+    source: https://agent-economy.kgninja.dev/verification-recipes.json
+    file: sandbox/kgninja-dev-verification-recipes.json
+    fetched: '2026-09-19'
+    version: 0.4.3
+    note: Provider-published recipes (schema agent-economy/verification-recipes/1.0), each with use_when, do_not_use_when, risk reduction, limitations and a precheck_intent_example that can be POSTed to /validate-request as-is. Saved verbatim.
+    recipes:
+    - {id: x402-settlement-consistency, summary: 'Check whether network, asset, amount, payTo, resource and transaction-hash fields in supplied settlement JSON match explicit expected values. It performs no on-chain lookup.'}
+    - {id: payment-delivery-record-match, summary: 'Check whether supplied payment and delivery JSON refer to the same expected transaction, quote, resource and amount. It does not prove fulfillment.'}
+    - {id: signed-manifest-integrity, summary: 'Check the SHA-256 digest of supplied manifest, receipt or configuration JSON bytes and optionally assert selected fields. It does not prove provenance.'}
+  skill_example:
+    source: https://agent-economy.kgninja.dev/.well-known/agent-skills/verify-json-evidence/SKILL.md
+    note: 'The SKILL.md "Request construction" example, verbatim; it "makes no paid call".'
+    precheck_input:
+      request:
+        client_request_id: agent-example-001
+        evidence: {media_type: application/json, content_base64: eyJzdGF0dXMiOiJyZWFkeSJ9}
+        assertions:
+        - {op: json_pointer_equals, path: /status, expected: ready}
+      spend_policy:
+        policy_version: agent-economy/precheck-policy/2.0
+        max_amount_atomic: '10000'
+        network: eip155:8453
+        asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+        pay_to: '0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3'
+    decoded_evidence: '{"status":"ready"}'
+  x402_bazaar_example:
+    source: https://agent-economy.kgninja.dev/.well-known/x402
+    file: well-known/kgninja-dev-x402.json
+    note: 'resources[0].extensions.bazaar.info carries an example input body (client_request_id agent-example-001, evidence {"invoice":{"currency":"USD","total":1250}} base64-encoded, one json_pointer_equals assertion on /invoice/currency, a spend_policy and a precheck_receipt_digest) and an example output (transaction_id txn_example, quote_id qte_example, verification outcome pass, receipt rcpt_example). Placeholder ids; the digest values are examples, not live receipts.'
+  minimal_request:
+    source: https://agent-economy.kgninja.dev/docs/deterministic-json-verification
+    body: '{"client_request_id":"agent-example-001","evidence":{"media_type":"application/json","content_base64":"eyJzdGF0dXMiOiJyZWFkeSJ9"},"assertions":[{"op":"json_pointer_equals","path":"/status","expected":"ready"}]}'
+verification_keys:
+  jwks: https://agent-economy.kgninja.dev/.well-known/jwks.json
+  file: well-known/kgninja-dev-jwks.json
+  note: A consumer verifying a returned evidence signature offline needs only this public key; no sandbox key exists because no sandbox exists.

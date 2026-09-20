@@ -1,0 +1,67 @@
+overlay: 1.0.0
+info:
+  title: API Evangelist enhancements for Agent Verification Utility
+  version: 1.0.0
+  description: >-
+    Non-destructive overlay over the verbatim provider spec openapi/kgninja-dev-openapi.json (fetched
+    2026-09-19 from https://agent-economy.kgninja.dev/openapi.json, ETag "11a50222…7cf1e"). The original is
+    never edited. The one substantive action resolves the provider's relative servers[] entry ("/",
+    "Relative to the current deployment origin") to the absolute origin the document is served from, so
+    tooling that cannot resolve a relative server URL against the document location still finds the host;
+    the rest records provenance and cross-links to the derived artifacts.
+extends: openapi/kgninja-dev-openapi.json
+x-apievangelist:
+  generated: '2026-09-19'
+  method: generated
+  source: https://agent-economy.kgninja.dev/openapi.json
+actions:
+- target: $.servers
+  description: Resolve the relative server "/" to the absolute deployment origin (the URL the document itself is served from). The provider's relative entry is retained as documentation in x-original-servers.
+  update:
+  - url: https://agent-economy.kgninja.dev
+    description: Agent Verification Utility production origin (resolved from the provider's relative "/" server by API Evangelist; the same host serves the MCP endpoint at /mcp and the A2A endpoint at /a2a)
+- target: $
+  update:
+    x-original-servers:
+    - url: /
+      description: Relative to the current deployment origin
+- target: $.info
+  update:
+    x-apievangelist-provenance:
+      fetched: '2026-09-19'
+      url: https://agent-economy.kgninja.dev/openapi.json
+      http_status: 200
+      byte_identical_alias: https://agent-economy.kgninja.dev/.well-known/openapi.json
+      operations: 44
+      schemas: 47
+    x-apievangelist-artifacts:
+      authentication: authentication/kgninja-dev-authentication.yml
+      conventions: conventions/kgninja-dev-conventions.yml
+      errors: errors/kgninja-dev-problem-types.yml
+      data_model: data-model/kgninja-dev-data-model.yml
+      mcp: mcp/kgninja-dev-mcp.yml
+      tool_crosswalk: mcp/kgninja-dev-tool-crosswalk.yml
+      a2a: a2a/kgninja-dev-a2a.yml
+    externalDocs:
+      description: Deterministic JSON verification guide (agent-optimized Markdown available with Accept text/markdown)
+      url: https://agent-economy.kgninja.dev/docs/deterministic-json-verification
+- target: $.paths['/verify-evidence'].post
+  description: Flag the one money-bearing operation for agent tooling; values come from the x402 manifest and the contract's own recourse schema.
+  update:
+    x-apievangelist-agent-notes:
+      paid: true
+      price: 10000 atomic USDC ($0.01) per call via x402 v2 exact on eip155:8453
+      requires_precheck: POST /validate-request receipt digest in intent.precheck_receipt_digest (409 PRECHECK_REQUIRED otherwise)
+      idempotency: no Idempotency-Key parameter; replay safety via the bound quote (X-Quote-ID or the quote identified by the signed payment payload)
+      reversibility: none — recourse.re_evaluation_requires_new_payment is const true
+- target: $.paths['/quote'].post
+  update:
+    x-apievangelist-agent-notes:
+      paid: false
+      idempotency: Idempotency-Key header required (16-128 chars); reuse with a different request hash returns 409
+- target: $.paths['/validate-request'].post
+  update:
+    x-apievangelist-agent-notes:
+      paid: false
+      dry_run: true
+      note: Creates no quote, transaction or payment and executes no assertion; its receipt digest is a prerequisite of every paid call.

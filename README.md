@@ -64,5 +64,12 @@
 > Full detail: **[Where this data comes from](https://apievangelist.com/about/where-our-data-comes-from)**
 <!-- API-EVANGELIST-PROVENANCE:END -->
 
-KG-NINJA is a company surfaced via the API Evangelist harvest backlog (source: a2a-registry) and added to the network as a stub for full-pipeline profiling.
-- https://kgninja.dev/
+KG-NINJA is the operator identity (GitHub user KG-NINJA, Osaka; Cloudflare Wallet handle @kgninja) behind **Agent Verification Utility** at https://agent-economy.kgninja.dev — a Cloudflare Workers service (v0.4.3) that runs bounded deterministic checks over caller-supplied JSON and returns Ed25519-signed evidence, sold to autonomous agents per call for 10000 atomic USDC ($0.01) on Base through x402 v2, with no account, API key or OAuth. It first reached this network through the a2aregistry.org listing of its A2A agent card.
+
+One origin exposes the product three ways, all profiled here from public, credential-free fetches on 2026-09-19:
+
+- **REST** — OpenAPI 3.1.0, 44 operations, at https://agent-economy.kgninja.dev/openapi.json (`openapi/`, verbatim)
+- **MCP** — remote Streamable HTTP server at https://agent-economy.kgninja.dev/mcp; anonymous `tools/list` returns five tools, one paid (`mcp/`)
+- **A2A** — 1.0 agent card at https://agent-economy.kgninja.dev/.well-known/agent-card.json, JSON-RPC at `/a2a` (`a2a/`)
+
+Also published by the provider and captured verbatim: an RFC 9727 API catalog, an MCP Registry `server.json` and server card, an x402 manifest, an AI Catalog document, an Agent Skill with a SHA-256 discovery index, a JWKS, `llms.txt`, and Content-Signal directives (`well-known/`, `skills/`, `llms/`). The apex `kgninja.dev` has no A record; the product subdomain is the only web presence.

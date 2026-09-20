@@ -1,0 +1,107 @@
+generated: '2026-09-19'
+method: searched
+format: provider-envelope
+rfc9457: false
+source: https://agent-economy.kgninja.dev/openapi.json
+derived_from: openapi/kgninja-dev-openapi.json
+docs:
+- https://agent-economy.kgninja.dev/docs/reproducible-x402-receipts
+- https://agent-economy.kgninja.dev/auth.md
+summary: >-
+  Every error is application/json in one provider envelope (ErrorResponse): {"error": {"code": UPPER_SNAKE,
+  "message": string, "request_id": "req_…", "retryable": boolean, "details": object?}}. The same
+  request_id also travels in the X-Request-ID response header. The contract declares the envelope on 415
+  and 401 explicitly and through seven reusable responses (BadRequest 400, Conflict 409, PayloadTooLarge
+  413, Unprocessable 422, RateLimited 429 with Retry-After, Unavailable 503) referenced from the purchase,
+  registration, health and MCP operations. Two routes have their own error shapes: POST /validate-request
+  answers 400 with FreeRequestValidationFailure (reason_code instead of an envelope, plus the canonical
+  offer so the agent can still decide), and POST /verify-evidence answers 402 with an x402 v2
+  PaymentRequired document. The code enumeration is not published; the codes below are the ones declared
+  in schema patterns or observed live on unauthenticated probes.
+envelope:
+  media_type: application/json
+  schema: ErrorResponse
+  shape: '{ "error": { "code": "^[A-Z0-9_]+$", "message": string, "request_id": "req_<uuid>", "retryable": boolean, "details": { "paid_verification_binding"?: RefusedPaidVerificationBinding, ...additional } } }'
+  request_id_header: X-Request-ID
+  retryable_semantics: A boolean the client can branch on without parsing message text; every observed error was retryable false.
+problems:
+- status: 400
+  code: INVALID_IDEMPOTENCY_KEY
+  title: Idempotency-Key must contain 16-128 URL-safe characters.
+  observed: 'POST /quote with an empty JSON body, 2026-09-19'
+  source_operation: openapi/kgninja-dev-openapi.json#quoteVerifyEvidence
+  remediation: Send an Idempotency-Key header of 16-128 chars matching ^[A-Za-z0-9_-]+$ (a UUID works).
+- status: 400
+  code: (reusable BadRequest)
+  title: Malformed request
+  source_operation: openapi/kgninja-dev-openapi.json#quoteVerifyEvidence, #verifyEvidence, #mcpStreamableHttp
+- status: 400
+  reason_code: INVALID_REQUEST_SCHEMA
+  title: The request does not match the verification request schema.
+  shape: FreeRequestValidationFailure (schema_version agent-economy/request-validation/3.0, valid false, supported false, reason_code, message, request_id, canonical_offer, machine_quote, precheck_receipt, next_step)
+  observed: 'POST /validate-request with an empty JSON body returned HTTP 400 with this body, 2026-09-19'
+  source_operation: openapi/kgninja-dev-openapi.json#validateVerificationRequest
+  note: Not the ErrorResponse envelope — the precheck failure carries the canonical offer so an agent can still reason about price and scope before deciding.
+- status: 401
+  code: AGENT_REGISTRATION_REQUIRED
+  title: 'Provide the short-lived registration credential as Authorization: Bearer <credential>.'
+  observed: 'GET /agent/registration without a bearer, 2026-09-19'
+  source_operation: openapi/kgninja-dev-openapi.json#getAnonymousAgentRegistration
+  remediation: POST /agent/register first (body {}); the receipt is valid 15 minutes and can read only its own claim.
+- status: 402
+  title: Valid request requires x402 payment
+  shape: X402PaymentRequired {x402Version 2, error, resource {url, description, mimeType, serviceName, tags, iconUrl}, accepts[] X402PaymentRequirement {scheme exact, network, amount "10000", asset, payTo, maxTimeoutSeconds, extra}, extensions, paid_verification_binding}
+  headers: [PAYMENT-REQUIRED]
+  source_operation: openapi/kgninja-dev-openapi.json#verifyEvidence
+  remediation: Compare the binding digest, price, network, asset, payTo and expiry with the precheck and local policy; sign one accepted requirement with an x402 client and retry the identical body with PAYMENT-SIGNATURE. Over MCP the same document arrives in _meta["x402/error"].
+  note: Not observed live (an empty body is refused with 409 before a quote is created).
+- status: 404
+  code: NOT_FOUND
+  title: The requested resource does not exist.
+  observed: 'every unknown path, including /.well-known/agent.json and a negative-control path, 2026-09-19'
+  note: Also declared on getMcpRegistryHttpProof ("Registry proof is not configured") — the proof was in fact served.
+- status: 405
+  code: METHOD_NOT_ALLOWED
+  title: The HTTP method is not supported for this resource.
+  details: '{"allowed": "POST"}'
+  observed: 'GET on /mcp, /a2a, /quote, /verify-evidence, /validate-request, /agent/register, 2026-09-19'
+  source_operation: openapi/kgninja-dev-openapi.json#sendA2aMessage (declared 405 "Only POST is supported")
+- status: 409
+  code: PRECHECK_REQUIRED
+  title: The paid call requires request, spend_policy, and precheck_receipt_digest from a successful free precheck.
+  details: '{"refusal_reason": "PRECHECK_REQUIRED"}'
+  observed: 'POST /verify-evidence with an empty JSON body, 2026-09-19'
+  source_operation: openapi/kgninja-dev-openapi.json#verifyEvidence
+  remediation: POST {request, spend_policy} to /validate-request, copy precheck_receipt.receipt_digest into the unchanged intent, then retry.
+- status: 409
+  code: (reusable Conflict)
+  title: Idempotency, quote, payment identifier, or profitability conflict
+  source_operation: openapi/kgninja-dev-openapi.json#quoteVerifyEvidence, #verifyEvidence
+  note: 'Idempotency-Key reuse with a different request hash returns 409 (components.parameters.IdempotencyKey); details may carry a RefusedPaidVerificationBinding with refusal_reason.'
+- status: 413
+  title: Evidence or request body exceeds v1 limits
+  source_operation: openapi/kgninja-dev-openapi.json#registerAnonymousAgent, #quoteVerifyEvidence, #verifyEvidence
+  limits: decoded evidence <= 65,536 bytes; content_base64 <= 87,384 chars; assertions <= 16
+- status: 415
+  title: Content-Type must be application/json
+  source_operation: openapi/kgninja-dev-openapi.json#registerAnonymousAgent
+- status: 422
+  title: Syntactically valid but unsupported or non-executable verification request
+  source_operation: openapi/kgninja-dev-openapi.json#registerAnonymousAgent, #quoteVerifyEvidence, #verifyEvidence
+- status: 429
+  title: Rate limit exceeded
+  headers: [Retry-After (integer seconds, minimum 1)]
+  source_operation: openapi/kgninja-dev-openapi.json#registerAnonymousAgent, #quoteVerifyEvidence, #verifyEvidence, #getHealth, #getAgentManifest, #getX402Manifest, #getOpenApi, #mcpStreamableHttp
+  note: See rate-limits/kgninja-dev-rate-limits.yml — the numbers are not published.
+- status: 503
+  title: Kill switch, maintenance, budget exhaustion, facilitator outage, or unavailable cost basis
+  source_operation: openapi/kgninja-dev-openapi.json#getLandingPage, #registerAnonymousAgent, #getVerificationRecipes, #validateVerificationRequest, #quoteVerifyEvidence, #verifyEvidence, #getHealth, #getPublicStats, #getRevenueGoalStatus, #mcpStreamableHttp
+  note: 'GET /health returns 503 with a HealthResponse (status maintenance, checks {deploy_enabled, runtime_enabled, payments_enabled, cost_basis_fresh}) rather than the envelope; observed live as 200 {"status":"ok"} with all four checks true.'
+protocol_errors:
+  a2a:
+  - {code: -32009, reason: VERSION_NOT_SUPPORTED, observed: 'POST /a2a without A2A-Version — "Version 0.3 is not supported; use 1.0."', data: google.rpc.BadRequest fieldViolations + google.rpc.ErrorInfo (domain a2a-protocol.org)}
+  - {code: -32001, reason: TASK_NOT_FOUND, observed: 'GetTask for an unknown id at A2A-Version 1.0', note: 'The adapter never creates Tasks; GetTask and CancelTask always return this.'}
+  - {code: -32601, message: Method not found, observed: 'tasks/get (the 0.3 method name) at A2A-Version 1.0'}
+  mcp:
+  - {code: -32601, message: Method not found, observed: 'resources/list, prompts/list'}
+  - {kind: tool error, meta_key: 'x402/error', note: 'An unpaid verify_evidence call returns an MCP tool error carrying the x402 v2 PaymentRequired document and a paid verification binding (per the interoperability guide; not invoked).'}

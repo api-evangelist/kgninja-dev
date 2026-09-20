@@ -1,0 +1,241 @@
+generated: '2026-09-19'
+method: probed
+source: >-
+  Live GET probes of the named /.well-known/* path list (plus the root-level discovery documents the
+  provider advertises in robots.txt, sitemap.xml and its RFC 9727 catalog) on agent-economy.kgninja.dev,
+  kgninja.dev and www.kgninja.dev, 2026-09-19. Every row is a request that was issued; every status is the
+  one returned. The MCP server host and the A2A host are the same origin as the API host, so the RFC 9728
+  probe on "the MCP host" is the agent-economy row below.
+summary:
+  hosts_probed: 3
+  paths_probed: 44
+  documents_served: 14
+  hit_count: 14
+  path_echo_control: passed
+  note: >-
+    agent-economy.kgninja.dev is the richest /.well-known/ surface this pipeline has recorded on a single
+    host: an A2A 1.0 agent card, an RFC 9727 API catalog served with the linkset media type and profile, an
+    MCP server card (twice — the Cloudflare Agent Readiness shape at /.well-known/mcp/server-card.json and a
+    byte-identical alias at /.well-known/mcp.json), an x402 v2 manifest, an AI Catalog 1.0 document, an
+    Agent Skills discovery index (v0.2.0, with a SHA-256 digest that matched the fetched SKILL.md), a JWKS
+    (one Ed25519 key), a revenue-goal document, the OpenAPI at a well-known alias, the verification recipes
+    at a well-known alias, and an MCP Registry HTTP ownership proof. It also emits a Content-Signal
+    directive in robots.txt AND as a response header on every response (ai-train=no, search=yes,
+    ai-input=yes). Every miss is the host's real JSON 404 ({"error":{"code":"NOT_FOUND",...}}, 155 bytes),
+    and a negative-control path that cannot exist also 404s, so the 200s are served documents and not a
+    catch-all. NOT served, and stated as intentional in auth.md: OAuth authorization-server metadata,
+    OAuth protected-resource metadata and OIDC discovery ("this is not an OAuth-protected resource").
+    NOT served: security.txt (so no SecurityTxt pointer), ai-plugin.json, UCP/ACP, AAuth, APIs.json.
+    The registrable domain kgninja.dev and www.kgninja.dev have NO A or AAAA record (NS and MX only), so
+    nothing can be fetched from either — recorded as status 0 with dns: no-address rather than as a 404.
+pointer_basis: >-
+  WellKnown and APICatalog pointers emitted on the strength of the served RFC 9727 catalog and the other
+  200s on agent-economy.kgninja.dev. ContentSignal pointer emitted on the robots.txt Content-Signal line
+  corroborated by the content-signal response header. SecurityTxt NOT emitted (RFC 9116 unimplemented).
+content_signal:
+  observed_in_robots_txt: 'Content-Signal: ai-train=no, search=yes, ai-input=yes'
+  observed_response_header: 'content-signal: ai-train=no, search=yes, ai-input=yes'
+  file: kgninja-dev-robots.txt
+  note: >-
+    The same three preferences are asserted both in robots.txt and as an HTTP response header on every
+    response observed (openapi.json, /mcp, /, /faq). robots.txt names ChatGPT-User, OAI-SearchBot, GPTBot,
+    Claude-User, Claude-SearchBot, ClaudeBot, Perplexity-User and PerplexityBot explicitly and allows all
+    of them everything ("Allow: /") — the preference expressed is no training, yes search, yes AI input.
+hosts:
+- host: agent-economy.kgninja.dev
+  role: Website, API (OpenAPI servers[] "/" relative to this origin), MCP server and A2A JSON-RPC host — one origin on Cloudflare
+  documents:
+  - path: /.well-known/agent-card.json
+    status: 200
+    content_type: application/json
+    bytes: 1450
+    file: ../a2a/kgninja-dev-agent-card.json
+    standard: A2A Agent Card (1.0-shaped; supportedInterfaces[].protocolVersion "1.0")
+    note: Saved verbatim under a2a/ and graded in a2a/kgninja-dev-a2a.yml.
+  - path: /.well-known/agent.json
+    status: 404
+    note: Legacy pre-0.3 agent-card path. Not served (real JSON 404).
+  - path: /.well-known/api-catalog
+    status: 200
+    content_type: 'application/linkset+json; profile="https://www.rfc-editor.org/info/rfc9727"'
+    bytes: 2393
+    file: kgninja-dev-api-catalog.json
+    standard: RFC 9727 API Catalog (linkset)
+    note: >-
+      One anchor (the origin) with service-desc (openapi.json, agent-card.json), service-doc (home,
+      llms-full.txt, index.md, auth.md, recipes, docs pages, faq), service-meta (agent.json, x402,
+      ai-catalog.json, mcp/server-card, server.json, mcp/server-card.json, mcp.json, agent-skills index,
+      agent-card.json, revenue-goal.json, validate-request) and status (/health) relations. Every response
+      from the host also carries a Link header with rel="api-catalog" pointing here.
+  - path: /.well-known/api-catalog.json
+    status: 404
+  - path: /.well-known/mcp/server-card.json
+    status: 200
+    content_type: application/json
+    bytes: 9200
+    file: kgninja-dev-mcp.json
+    standard: MCP server card (Cloudflare Agent Readiness shape; $schema static.modelcontextprotocol.io/schemas/mcp-server-card/v1.json)
+    note: Byte-identical to /.well-known/mcp.json (cmp confirmed). Carries the five tools with inputSchema and the streamable-http transport at /mcp; authentication.required false.
+  - path: /.well-known/mcp.json
+    status: 200
+    content_type: application/json
+    bytes: 9200
+    file: kgninja-dev-mcp.json
+    note: Compatibility alias; the OpenAPI says it "returns the same card as /.well-known/mcp/server-card.json".
+  - path: /.well-known/x402
+    status: 200
+    content_type: application/json
+    bytes: 12763
+    file: kgninja-dev-x402.json
+    standard: x402 v2 manifest (self-hosted convenience document; the OpenAPI says it is "not represented as a universal x402 discovery standard")
+    note: >-
+      Two resources (POST /verify-evidence and POST /mcp), each accepting scheme exact on eip155:8453,
+      amount 10000, asset 0x8335…2913 (USDC), payTo 0x4D7d…aDE3, maxTimeoutSeconds 300, with a bazaar
+      extension carrying example input/output; simulation false, mockMode false.
+  - path: /.well-known/ai-catalog.json
+    status: 200
+    content_type: application/ai-catalog+json
+    bytes: 664
+    file: kgninja-dev-ai-catalog.json
+    standard: AI Catalog 1.0 (draft) — one entry of type application/mcp-server-card+json pointing at /mcp/server-card
+  - path: /.well-known/agent-skills/index.json
+    status: 200
+    content_type: application/json
+    bytes: 515
+    file: kgninja-dev-agent-skills-index.json
+    standard: Agent Skills discovery v0.2.0 (schemas.agentskills.io)
+    note: One skill, verify-json-evidence, with digest sha256:07b5b311…cb0bf — recomputed over the fetched SKILL.md and it matches.
+  - path: /.well-known/agent-skills/verify-json-evidence/SKILL.md
+    status: 200
+    content_type: text/markdown
+    bytes: 10712
+    file: ../skills/kgninja-dev-verify-json-evidence.md
+  - path: /.well-known/jwks.json
+    status: 200
+    content_type: application/json
+    bytes: 205
+    file: kgninja-dev-jwks.json
+    standard: RFC 7517 JWK Set — one OKP/Ed25519 key, alg EdDSA, use sig, kid https://agent-economy.kgninja.dev/agent.json#evidence-key-1
+  - path: /.well-known/revenue-goal.json
+    status: 200
+    content_type: application/json
+    bytes: 242
+    file: kgninja-dev-revenue-goal.json
+    note: Provider-specific schema agent-economy/revenue-goal/1.0; status not_configured at fetch time.
+  - path: /.well-known/openapi.json
+    status: 200
+    content_type: application/json
+    bytes: 73437
+    note: Byte-identical to /openapi.json (cmp confirmed); saved once as ../openapi/kgninja-dev-openapi.json.
+  - path: /.well-known/verification-recipes.json
+    status: 200
+    content_type: application/json
+    bytes: 13839
+    note: Byte-identical to /verification-recipes.json; saved once as ../sandbox/kgninja-dev-verification-recipes.json.
+  - path: /.well-known/mcp-registry-auth
+    status: 200
+    content_type: text/plain
+    bytes: 66
+    file: kgninja-dev-mcp-registry-auth.txt
+    note: MCP Registry HTTP domain-ownership proof (v=MCPv1; k=ed25519; p=<public key>). Public key only.
+  - path: /.well-known/security.txt
+    status: 404
+    note: RFC 9116 not implemented. No SecurityTxt pointer.
+  - path: /security.txt
+    status: 404
+  - path: /.well-known/openid-configuration
+    status: 404
+    note: Intentional per auth.md — "OAuth authorization-server and protected-resource metadata are intentionally not published because this is not an OAuth-protected resource."
+  - path: /.well-known/oauth-authorization-server
+    status: 404
+    note: Intentional, see above.
+  - path: /.well-known/oauth-protected-resource
+    status: 404
+    note: This host IS the MCP resource server (https://agent-economy.kgninja.dev/mcp); no RFC 9728 metadata is served for it, by the provider's stated design.
+  - path: /.well-known/ai-plugin.json
+    status: 404
+  - path: /.well-known/ucp.json
+    status: 404
+  - path: /.well-known/acp.json
+    status: 404
+  - path: /.well-known/aauth-resource.json
+    status: 404
+  - path: /.well-known/apis.json
+    status: 404
+  - path: /apis.json
+    status: 404
+  - path: /apis.yml
+    status: 404
+  - path: /.well-known/aipref
+    status: 404
+  - path: /.well-known/webmcp
+    status: 404
+  - path: /.well-known/kgninja-dev-negative-control-7f3a91c2.json
+    status: 404
+    control: negative
+    note: A path that cannot exist. Its JSON 404 proves the host does not catch-all /.well-known/* requests.
+  root_documents:
+  - path: /agent.json
+    status: 200
+    content_type: application/json
+    bytes: 5931
+    file: kgninja-dev-agent-manifest.json
+    note: Provider-specific agent service manifest (schema agent-economy/1.0) — endpoints, protocols, payment, constraints, trust boundaries and the Ed25519 verification key. Not an A2A card; the A2A card is at the well-known path above.
+  - path: /server.json
+    status: 200
+    bytes: 534
+    file: ../mcp/kgninja-dev-server.json
+    note: Official MCP Registry publication document ($schema 2025-12-11/server.schema.json). Byte-identical alias at /mcp/server.json.
+  - path: /mcp/server-card
+    status: 200
+    content_type: application/mcp-server-card+json
+    bytes: 1222
+    file: ../mcp/kgninja-dev-server-card.json
+  - path: /llms.txt
+    status: 200
+    content_type: text/markdown
+    bytes: 3593
+    file: ../llms/kgninja-dev-llms.txt
+  - path: /llms-full.txt
+    status: 200
+    content_type: text/markdown
+    bytes: 6770
+    note: Fetched, not saved (repo policy gitignores *-llms-full.txt).
+  - path: /robots.txt
+    status: 200
+    content_type: text/plain
+    bytes: 1343
+    file: kgninja-dev-robots.txt
+  - path: /sitemap.xml
+    status: 200
+    content_type: application/xml
+    bytes: 2627
+    note: 32 URLs, all discovery/documentation surfaces on this host.
+  - path: /health
+    status: 200
+    observed: '{"status":"ok","service":"agent-verification-utility","version":"0.4.3","checks":{"deploy_enabled":true,"runtime_enabled":true,"payments_enabled":true,"cost_basis_fresh":true},...}'
+- host: kgninja.dev
+  role: Registrable domain — no web presence
+  dns: no-address
+  note: >-
+    dig returns NS (aldo/zoe.ns.cloudflare.com), MX (Cloudflare Email Routing), SPF and a DS record but no A
+    or AAAA record, from the system resolver and from 1.1.1.1. curl fails with "Could not resolve host".
+    Nothing below was reachable; status 0 means no HTTP exchange occurred.
+  documents:
+  - {path: /.well-known/agent-card.json, status: 0}
+  - {path: /.well-known/agent.json, status: 0}
+  - {path: /.well-known/security.txt, status: 0}
+  - {path: /.well-known/openid-configuration, status: 0}
+  - {path: /.well-known/oauth-authorization-server, status: 0}
+  - {path: /.well-known/oauth-protected-resource, status: 0}
+  - {path: /.well-known/api-catalog, status: 0}
+  - {path: /.well-known/ai-plugin.json, status: 0}
+  - {path: /.well-known/mcp.json, status: 0}
+  - {path: /llms.txt, status: 0}
+  - {path: /robots.txt, status: 0}
+- host: www.kgninja.dev
+  role: No record
+  dns: no-address
+  documents:
+  - {path: /, status: 0}
+  - {path: /.well-known/agent-card.json, status: 0}

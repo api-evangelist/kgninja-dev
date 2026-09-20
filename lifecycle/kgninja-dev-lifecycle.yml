@@ -1,0 +1,86 @@
+generated: '2026-09-19'
+method: searched
+source: https://agent-economy.kgninja.dev/openapi.json
+derived_from: openapi/kgninja-dev-openapi.json
+docs:
+- https://agent-economy.kgninja.dev/health
+- https://agent-economy.kgninja.dev/stats
+- https://agent-economy.kgninja.dev/verification-recipes.json
+versioning:
+  scheme: semantic version carried in documents and headers; unversioned paths
+  current_version: 0.4.3
+  policy_published: false
+  where_the_version_appears:
+  - 'OpenAPI info.version 0.4.3'
+  - 'MCP serverInfo.version 0.4.3 (initialize), server card version 0.4.3, server.json version 0.4.3'
+  - 'A2A agent card version 0.4.3'
+  - 'agent.json version 0.4.3 and offer_generation_id agent-economy/offer-generation/0.4.3'
+  - 'X-Service-Version: 0.4.3 response header on every response'
+  - 'verification-recipes.json stable_document_marker agent-verification-utility/verification-recipes/0.4.3'
+  - 'SKILL.md metadata.version "0.4.3"'
+  protocol_versions:
+    a2a: '1.0 (A2A-Version header required; 0.3 rejected with -32009)'
+    mcp: '2025-06-18 negotiated live; server card declares 2026-07-28, 2025-11-25, 2025-06-18, 2025-03-26'
+    x402: 2
+    precheck_policy: agent-economy/precheck-policy/2.0
+    precheck_receipt: agent-economy/precheck-receipt/2.0
+    request_validation: agent-economy/request-validation/3.0
+    paid_verification_binding: agent-economy/paid-verification-binding/1.0
+    algorithm: det-json-v1
+  caching_and_etags: ETag + 304 on /.well-known/ai-catalog.json and /mcp/server-card; Cache-Control public, max-age=3600, s-maxage=3600, stale-while-revalidate=3600 on /openapi.json; Vary Accept + ETag on the docs pages.
+  note: >-
+    Paths carry no version segment and no versioning or compatibility policy page exists. The one stated
+    compatibility mechanism is on the x402 wire schema: "Unknown extension keys must be preserved."
+    Unusually, every surface (REST, MCP, A2A, manifest, skill, recipes) agrees on 0.4.3.
+deprecation:
+  policy_published: false
+  sunset_header: false
+  deprecation_header: false
+  rfc8594: false
+  deprecated_operations: []
+  documented_retirements: []
+  compatibility_aliases:
+  - 'GET /.well-known/mcp.json — "Legacy compatibility alias" for /.well-known/mcp/server-card.json (byte-identical); the OpenAPI says new clients should discover /mcp/server-card through /.well-known/ai-catalog.json.'
+  - 'GET /.well-known/mcp/server-card.json — "Compatibility document using the earlier MCP card shape recommended by Cloudflare Agent Readiness."'
+  note: 'Zero operations carry deprecated: true; no Deprecation pointer is emitted.'
+status_page:
+  url: null
+  probed:
+  - {url: https://agent-economy.kgninja.dev/status, status: 404}
+  - {url: https://agent-economy.kgninja.dev/changelog, status: 404}
+  live_signals:
+  - url: https://agent-economy.kgninja.dev/health
+    status: 200
+    observed: '{"status":"ok","service":"agent-verification-utility","version":"0.4.3","checks":{"deploy_enabled":true,"runtime_enabled":true,"payments_enabled":true,"cost_basis_fresh":true},"time":"2026-09-20T01:51:55.093Z"}'
+    contract: 'HealthResponse status enum [ok, degraded, maintenance]; 503 on "Kill switch or maintenance"; also declares 429.'
+    listed_as: 'the "status" relation in the RFC 9727 catalog'
+  - url: https://agent-economy.kgninja.dev/stats
+    status: 200
+    observed: 'availability "available"; activity {delivered_transactions 1, settled_revenue_atomic "10000", quotes_last_24h 0, latest_delivery_at 2026-09-14T16:08:51.500Z}; operations {reconciliation_backlog 0, cost_basis_fresh true, cost_basis_updated_at 2026-09-20T00:17:36.070Z}'
+  note: >-
+    A machine-readable liveness endpoint with four named checks and an aggregate stats document, both
+    declared in the contract and linked from the catalog's status relation — but no incident history,
+    uptime commitment or subscribable status page. The security-and-trust page states explicitly that the
+    service does not "guarantee continuous availability" and describes a kill switch and scheduled
+    maintenance. No StatusPage pointer is emitted.
+sla:
+  published: false
+  note: 'Explicit non-guarantee: the service "does not ... guarantee continuous availability" (docs/security-and-trust). Quote expiry (expires_at / quote_expires_at, unspecified duration) and x402 maxTimeoutSeconds 300 are the only time commitments in the contract.'
+changelog:
+  published: false
+  probed: [{url: https://agent-economy.kgninja.dev/changelog, status: 404}]
+  dated_signals:
+  - {date: '2026-08-08', what: 'not_before of the Ed25519 evidence key evidence-key-1 (agent.json) — the earliest date the service publishes about itself', source: https://agent-economy.kgninja.dev/agent.json}
+  - {date: '2026-09-14', what: 'latest_delivery_at — the one delivered (paid) transaction to date', source: https://agent-economy.kgninja.dev/stats}
+  - {date: '2026-09-19', what: 'listed on a2aregistry.org (the harvest lead)'}
+  note: No changelog artifact is written; the dated signals above are the only change history the provider publishes.
+key_lifecycle:
+  evidence_key:
+    kid: https://agent-economy.kgninja.dev/agent.json#evidence-key-1
+    alg: Ed25519
+    not_before: '2026-08-08T02:52:29.756Z'
+    not_after: null
+    rotation_policy: 'Not published; VerificationKey schema carries optional not_after, and the trust guide says "Unknown, expired, or policy-incompatible keys are untrusted."'
+  registration_receipt:
+    lifetime: 15 minutes
+    revocation: 'none — "There is no revocation endpoint because the receipt has no application privileges and expires after 15 minutes" (auth.md)'

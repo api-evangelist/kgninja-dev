@@ -1,0 +1,46 @@
+generated: '2026-09-19'
+method: searched
+probe: true
+source: https://agent-economy.kgninja.dev/docs/security-and-trust
+signals: {}
+probed_not_found:
+  note: >-
+    Each path below was requested on agent-economy.kgninja.dev on 2026-09-19 and returned the host's real
+    JSON 404 ({"error":{"code":"NOT_FOUND",...}}); the registrable domain kgninja.dev has no A record and
+    hosts nothing. The provider publishes no terms of service, no privacy policy, no legal pages of any
+    kind (the OpenAPI license is "UNLICENSED"). Signals not recorded because no page carries the substance:
+    no SBOM, no support-lifetime statement, no accessibility conformance report, no training-data summary,
+    no AI-transparency disclosure regime (the FAQ and agent manifest state that NO model is invoked and no
+    AI inference occurs — a scope statement about the product, not a disclosure obligation), no Global
+    Privacy Control statement, no data-subject-request process (the security-and-trust page's "Privacy
+    posture" paragraph is a data-minimisation statement — raw evidence is not retained, only digests and
+    transaction metadata — with no rights, channel or SLA), no subprocessor register (Cloudflare Workers,
+    D1, a Service Binding and an unnamed "external facilitator" for x402 settlement are named in
+    architecture prose, which is not a dated subprocessor table), no data-residency statement, no
+    incident-notification SLA, no age assurance, no notice-and-action, no transparency report, no exit
+    assistance. The Content-Signal directive (ai-train=no, search=yes, ai-input=yes) is a machine-readable
+    consent signal and is recorded in well-known/, not here.
+  paths:
+  - {path: /accessibility, status: 404}
+  - {path: /accessibility/vpat, status: 404}
+  - {path: /legal, status: 404}
+  - {path: /legal/subprocessors, status: 404}
+  - {path: /legal/dpa, status: 404}
+  - {path: /legal/terms, status: 404}
+  - {path: /legal/privacy, status: 404}
+  - {path: /terms, status: 404}
+  - {path: /privacy, status: 404}
+  - {path: /privacy/requests, status: 404}
+  - {path: /transparency, status: 404}
+  - {path: /trust, status: 404}
+  - {path: /security, status: 404}
+  - {path: /security/sbom, status: 404}
+  - {path: /docs/data-residency, status: 404}
+  - {path: /ai, status: 404}
+  - {path: /ai/transparency, status: 404}
+  - {path: /legal/report-content, status: 404}
+  docs_searched:
+  - {url: https://agent-economy.kgninja.dev/docs/security-and-trust, status: 200, carries: 'architecture boundary, input controls, economic controls, cryptographic verification, privacy posture (data minimisation), explicit non-guarantees'}
+  - {url: https://agent-economy.kgninja.dev/faq, status: 200, carries: 'scope, pricing, privacy (no raw evidence retained), payment, independent verification'}
+  - {url: https://agent-economy.kgninja.dev/auth.md, status: 200, carries: 'anonymous access model, optional 15-minute registration receipt, credential and data handling guidance'}
+  - {url: https://agent-economy.kgninja.dev/agent.json, status: 200, carries: 'constraints: external_fetch false, ai_inference false, user_code_execution false, raw_evidence_retention false'}

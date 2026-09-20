@@ -1,0 +1,67 @@
+generated: '2026-09-19'
+method: searched
+source: openapi/kgninja-dev-openapi.json
+docs: https://agent-economy.kgninja.dev/auth.md
+derived_baseline: 'derive-authentication.py 2026-09-19 — 1 scheme (http bearer agentRegistration); upgraded here from the provider''s auth.md and the x402 manifest.'
+summary:
+  types:
+  - http
+  model: anonymous-by-design; payment (x402) authorizes the one paid operation per request
+  api_key_in: []
+  oauth2_flows: []
+  oidc: false
+  credentials_required_for: [GET /agent/registration only]
+  credentials_not_required_for: [discovery, documentation, health, stats, revenue goal, POST /validate-request, POST /quote, MCP initialize and tools/list, the four free MCP tools, A2A GetTask/ListTasks and the quote-preparation skill]
+access_model:
+  statement: >-
+    "The verification service is intentionally anonymous: account registration, an API key, OAuth, OpenID
+    Connect, cookies, and a login session are not required for discovery, quotes, or paid execution."
+    (auth.md)
+  oauth_metadata: >-
+    "OAuth authorization-server and protected-resource metadata are intentionally not published because this
+    is not an OAuth-protected resource. The optional anonymous registration receipt is not an OAuth access
+    token." — corroborated: /.well-known/oauth-authorization-server, /.well-known/oauth-protected-resource
+    and /.well-known/openid-configuration all 404 (well-known/kgninja-dev-well-known.yml).
+  delegated_identity: none — no authorization_code flow, no user context; the caller is the paying wallet
+  dynamic_client_registration: none in the RFC 7591 sense; see optional anonymous registration below
+schemes:
+- name: agentRegistration
+  type: http
+  scheme: bearer
+  bearerFormat: signed anonymous registration receipt
+  description: Optional 15-minute service-local receipt used only to inspect its own registration claim. It grants no API access and does not authorize payment.
+  applies_to: [getAnonymousAgentRegistration]
+  obtained_by: 'POST /agent/register with Content-Type application/json and body {} — no email, account, API key or human contact; the response returns the signed credential once'
+  credential_type: 'urn:kgninja:params:agent-credential:anonymous-registration-receipt'
+  lifetime: 15 minutes
+  revocation: 'none — "There is no revocation endpoint because the receipt has no application privileges and expires after 15 minutes; discard it to stop using it."'
+  observed: 'GET /agent/registration without a bearer -> 401 {"error":{"code":"AGENT_REGISTRATION_REQUIRED","message":"Provide the short-lived registration credential as Authorization: Bearer <credential>.",...}}'
+  agent_auth_advertisement: '{"agent_auth":{"skill":"anonymous","register_uri":"https://agent-economy.kgninja.dev/agent/register","identity_types_supported":["anonymous"],"anonymous":{"credential_types_supported":["urn:kgninja:params:agent-credential:anonymous-registration-receipt"],"claim_uri":"https://agent-economy.kgninja.dev/agent/registration"}}}'
+  sources:
+  - openapi/kgninja-dev-openapi.json
+  - https://agent-economy.kgninja.dev/auth.md
+payment_authorization:
+  note: Not a securityScheme in the OpenAPI, but the gate that actually protects the paid operation. Recorded here because an agent choosing a credential strategy needs it next to the auth model.
+  protocol: x402 v2 (scheme exact)
+  applies_to: [verifyEvidence, mcp:verify_evidence]
+  precondition: a free precheck receipt digest (POST /validate-request) inside the unchanged paid intent; otherwise 409 PRECHECK_REQUIRED before any quote or 402
+  challenge: HTTP 402 with PAYMENT-REQUIRED header + X402PaymentRequired body; over MCP a tool error with _meta["x402/error"]
+  proof: PAYMENT-SIGNATURE request header (REST) or _meta["x402/payment"] (MCP) on the identical retry
+  settlement_receipt: PAYMENT-RESPONSE header (REST) or _meta["x402/payment-response"] (MCP)
+  terms: 10000 atomic USDC on eip155:8453 to 0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3, asset 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913, maxTimeoutSeconds 300 (well-known/kgninja-dev-x402.json)
+  scope_of_the_signature: '"The x402 signature authorizes only the advertised payment and request. It is not a reusable application credential, is independent of optional agent registration, and does not create an authenticated session."'
+  binding: the signed payload must carry the same binding digest as the bound quote; "A paid retry is accepted only when discovery survived into the paid call and the x402 payload contains the same binding digest."
+  operator_identity: Cloudflare Wallet handle @kgninja (https://cloudflare.pay/?handle=kgninja) — public identity of the payee, not a credential the caller uses
+credential_handling_guidance:
+  verbatim:
+  - 'Never send seed phrases, wallet private keys, API secrets, third-party bearer tokens, or unrelated personal data. Send this service''s short-lived registration receipt only to its documented claim endpoint.'
+  - 'Evidence must be bounded inline JSON. The service does not fetch caller-supplied URLs or execute caller code.'
+  - 'Verify returned evidence with https://agent-economy.kgninja.dev/.well-known/jwks.json.'
+verification_keys:
+  jwks: https://agent-economy.kgninja.dev/.well-known/jwks.json
+  file: well-known/kgninja-dev-jwks.json
+  purpose: 'Verifying the service''s Ed25519 evidence signatures (the service signs; callers verify). Not an authentication credential.'
+mcp_registry_proof:
+  url: https://agent-economy.kgninja.dev/.well-known/mcp-registry-auth
+  observed: 'v=MCPv1; k=ed25519; p=<public key>'
+  purpose: domain-ownership proof for MCP Registry publication; public key only

@@ -1,0 +1,50 @@
+generated: '2026-09-19'
+method: probed
+source: https://agent-economy.kgninja.dev/agent.json
+docs:
+- https://agent-economy.kgninja.dev/llms.txt
+- https://agent-economy.kgninja.dev/index.md
+- https://agent-economy.kgninja.dev/faq
+- https://agent-economy.kgninja.dev/.well-known/x402
+- https://agent-economy.kgninja.dev/stats
+plan_count: 1
+currency: USDC
+model: pay-per-call in USDC on Base via x402 v2; no subscription, no account, no card payments, no tiers
+prices_published: true
+public_signup_pricing: true
+summary: >-
+  KG-NINJA publishes exactly one price, machine-readably in four places that agree: 10000 atomic USDC
+  (0.01 USDC, 6 decimals) per paid verification, settled by x402 on Base (eip155:8453) to
+  0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3 in asset 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913. The
+  agent manifest payment block, the x402 manifest's accepts[] (amount "10000"), the OpenAPI
+  X402PaymentRequirement schema (amount const "10000") and the canonical offer returned by
+  /validate-request and the MCP describe tool (display_amount "0.01 USDC") all carry the same number, and
+  the landing page's schema.org Offer says price 0.01 USDC. Everything except execution is free. The FAQ
+  notes the price is "published by the free quote endpoint and x402 challenge" and that "the production
+  default is 10,000 atomic USDC" — the quote is authoritative per call and the precheck reads a runtime
+  price with a configured fallback, so a client should read the quote rather than hard-code the number.
+plans:
+- id: verify-evidence
+  name: Deterministic evidence verification (verify_evidence)
+  price: 0.01
+  price_atomic: '10000'
+  currency: USDC
+  decimals: 6
+  period: per call (one verification of up to 16 assertions over up to 65,536 bytes of JSON)
+  payment: x402 v2 exact; network eip155:8453; maxTimeoutSeconds 300
+  included: >-
+    Free: discovery documents, documentation, health, stats, revenue-goal status, the precheck (POST
+    /validate-request), the quote (POST /quote), MCP tools/list and the four free MCP tools
+    (describe_verify_evidence, get_revenue_goal_status, quote_verify_evidence,
+    prepare_verify_evidence_purchase), the A2A quote-preparation skill, and optional anonymous registration.
+  overage: null
+  limits: ['decoded evidence <= 65,536 bytes', 'content_base64 <= 87,384 chars', '1-16 assertions', 'evidence media type application/json only', 'four assertion operators: sha256_equals, json_pointer_exists, json_pointer_equals, json_type_is']
+  economic_guard: 'A quote is issued only when "a conservative variable-cost upper bound leaves the configured minimum contribution margin"; QuoteResponse.economic_guard carries the decision and contribution_margin_lower_bound_microusd, and DeliveryReceipt reports price_paid_microusd, variable_cost_upper_bound_microusd and contribution_margin_lower_bound_microusd back to the buyer.'
+  networks_declared: [eip155:8453, eip155:84532]
+  networks_served: [eip155:8453]
+  network_note: 'eip155:84532 (Base Sepolia) is enumerated in the Price, VerificationSpendPolicy and X402PaymentRequirement schemas; the served x402 manifest and canonical offer name eip155:8453 only, and mockMode / simulation are false.'
+  activity_observed: 'stats on 2026-09-20: delivered_transactions 1, settled_revenue_atomic "10000", latest_delivery_at 2026-09-14.'
+free_tier:
+  everything_but_execution: true
+  registration_required: false
+  note: 'auth.md: "Free discovery, documentation, health, aggregate statistics, revenue-goal status, quotes, MCP tools/list, and the four free MCP tools can be called without credentials."'

@@ -1,0 +1,44 @@
+generated: '2026-09-19'
+method: searched
+source: https://agent-economy.kgninja.dev/openapi.json
+docs:
+- https://agent-economy.kgninja.dev/docs/security-and-trust
+- https://agent-economy.kgninja.dev/auth.md
+limit_count: 0
+summary: >-
+  KG-NINJA documents the rate-limit SIGNAL but publishes no numbers. The contract declares a reusable 429
+  RateLimited response ("Rate limit exceeded") with a Retry-After header (integer seconds, minimum 1) on
+  the registration, quote, purchase, health, manifest, OpenAPI and MCP operations, and exposes Retry-After
+  via CORS on every response. The security-and-trust page states that "Quote, MCP, and purchase paths have
+  separate rate-limit bindings" and that "MCP hostnames are allowlisted for production"; auth.md states that
+  the optional registration receipt "cannot bypass rate limits". No window, ceiling or burst figure is
+  published anywhere found, no X-RateLimit-*/RateLimit-* headers are declared, and none were observed on
+  the ~60 unauthenticated responses this pass received (all 2xx/4xx, no 429). limit_count is therefore 0:
+  an honest zero for the numbers, with the exhaustion behaviour recorded below because that is what an
+  agent can act on.
+rate_limits: []
+signals:
+  status_on_exhaustion: 429
+  headers:
+  - name: Retry-After
+    meaning: Seconds to wait before retrying (integer, minimum 1), declared on the reusable RateLimited response.
+    observed: not observed live
+  body: ErrorResponse envelope (code, message, request_id, retryable)
+  declared_on: [registerAnonymousAgent, quoteVerifyEvidence, verifyEvidence, getHealth, getAgentManifest, getX402Manifest, getOpenApi, mcpStreamableHttp]
+  scopes_stated: 'separate bindings for the quote, MCP and purchase paths (docs/security-and-trust); per-what (IP, key, wallet) is not stated'
+  exposed_via_cors: true
+size_and_time_limits:
+- {name: Decoded evidence bytes, limit: 65536, exhaustion_status: 413, source: 'agent.json constraints.maximum_evidence_bytes; docs/deterministic-json-verification'}
+- {name: content_base64 length, limit: 87384, exhaustion_status: 413, source: 'openapi InlineJsonEvidence.content_base64 maxLength'}
+- {name: Assertions per request, limit: '1-16', exhaustion_status: 422, source: 'openapi VerifyEvidenceRequest.assertions minItems/maxItems; agent.json constraints.maximum_assertions'}
+- {name: client_request_id length, limit: '1-64', source: 'openapi VerifyEvidenceRequest.client_request_id'}
+- {name: Idempotency-Key length, limit: '16-128', exhaustion_status: 400, source: 'openapi components.parameters.IdempotencyKey; observed INVALID_IDEMPOTENCY_KEY'}
+- {name: Registration receipt lifetime, limit: 15 minutes, exhaustion_status: 401, source: 'auth.md; openapi registerAnonymousAgent'}
+- {name: x402 payment window, limit: 'maxTimeoutSeconds 300', source: 'well-known/kgninja-dev-x402.json accepts[]'}
+- {name: Quote validity, limit: 'expires_at (duration unpublished)', exhaustion_status: 409, source: 'openapi QuoteResponse.expires_at, MachineQuote.quote_expires_at'}
+- {name: A2A ListTasks page size, limit: 50, source: 'observed pageSize 50 on the empty ListTasks result'}
+exhaustion:
+  status: 429
+  headers: [Retry-After]
+  media_type: application/json
+  note: Declared in the contract and exposed via CORS; not observed live.

@@ -1,0 +1,49 @@
+# Agent Verification Utility
+
+> Deterministic checks over bounded inline JSON with Ed25519-signed evidence. A result proves that declared checks ran; it does not prove real-world truth.
+
+- MCP endpoint: https://agent-economy.kgninja.dev/mcp
+- A2A Agent Card: https://agent-economy.kgninja.dev/.well-known/agent-card.json
+- A2A JSON-RPC endpoint: https://agent-economy.kgninja.dev/a2a
+- Official MCP Registry document: https://agent-economy.kgninja.dev/server.json
+- Paid MCP tool: `verify_evidence`
+- Free MCP tools: `describe_verify_evidence`, `get_revenue_goal_status`, `quote_verify_evidence`, `prepare_verify_evidence_purchase`
+- Verification recipes: https://agent-economy.kgninja.dev/verification-recipes.json
+- Free request validation: POST https://agent-economy.kgninja.dev/validate-request
+- Price: 10000 atomic USDC ($0.01) on Base, network eip155:8453
+- Asset: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+- payTo: 0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3
+- HTTP purchase: https://agent-economy.kgninja.dev/verify-evidence
+- Free quote: https://agent-economy.kgninja.dev/quote
+- OpenAPI: https://agent-economy.kgninja.dev/openapi.json
+- Agent manifest: https://agent-economy.kgninja.dev/agent.json
+- x402 discovery: https://agent-economy.kgninja.dev/.well-known/x402
+- RFC 9727 API catalog: https://agent-economy.kgninja.dev/.well-known/api-catalog
+- AI Catalog (draft): https://agent-economy.kgninja.dev/.well-known/ai-catalog.json
+- MCP Server Card (current experimental draft): https://agent-economy.kgninja.dev/mcp/server-card
+- Cloudflare Agent Readiness MCP Card: https://agent-economy.kgninja.dev/.well-known/mcp/server-card.json
+- Legacy compatibility alias: https://agent-economy.kgninja.dev/.well-known/mcp.json
+- Agent Skills discovery (draft): https://agent-economy.kgninja.dev/.well-known/agent-skills/index.json
+- Markdown service guide: https://agent-economy.kgninja.dev/index.md
+- Access and payment authorization: https://agent-economy.kgninja.dev/auth.md
+- Optional anonymous registration: https://agent-economy.kgninja.dev/agent/register
+- Registration claim: https://agent-economy.kgninja.dev/agent/registration
+- Verification keys: https://agent-economy.kgninja.dev/.well-known/jwks.json
+- Public service metrics: https://agent-economy.kgninja.dev/stats
+- Active revenue goal and next improvement: https://agent-economy.kgninja.dev/.well-known/revenue-goal.json
+- Technical guides: https://agent-economy.kgninja.dev/docs/deterministic-json-verification
+- Security and trust boundary: https://agent-economy.kgninja.dev/docs/security-and-trust
+- FAQ: https://agent-economy.kgninja.dev/faq
+- Operator identity: @kgninja (https://cloudflare.pay/?handle=kgninja)
+
+The Cloudflare Wallet handle is public operator identity. Payment settlement uses x402 and the `payTo` address advertised in the challenge.
+
+## Fast safe purchase path
+
+1. Choose a recipe, then send `{ request, spend_policy }` to the free `/validate-request` endpoint.
+2. Continue only when `spend_authorized` is true; copy the returned receipt digest into the unchanged paid intent.
+3. Send that intent to `/verify-evidence` or MCP `verify_evidence`. The first unpaid response carries the exact x402 terms.
+4. Pay only when the binding digest, price, network, asset, `payTo`, and expiry match local policy.
+5. Retry the identical intent once with payment and retain the binding, `PAYMENT-RESPONSE`, and signed evidence.
+
+MPP clients can consume this service through MPP's x402 compatibility. The server continues to issue and account for x402 challenges; it does not advertise a native MPP challenge.
