@@ -22,7 +22,7 @@ created: '2026-09-19'
 modified: '2026-09-19'
 tags:
 - Agents
-- Agent Commerce
+- Agentic Commerce
 - A2A
 - MCP
 - x402
@@ -44,6 +44,7 @@ tags_raw:
 - Cloudflare Workers
 - Agent-native
 - Japan
+- Agent Commerce
 apis:
 - aid: kgninja-dev:agent-verification-utility-api
   name: Agent Verification Utility API
@@ -62,6 +63,12 @@ apis:
   humanURL: https://agent-economy.kgninja.dev/
   baseURL: https://agent-economy.kgninja.dev
   tags:
+  - Verification
+  - JSON
+  - x402
+  - Agentic Commerce
+  - agent-native
+  tags_raw:
   - Verification
   - JSON
   - x402
