@@ -1,0 +1,371 @@
+openapi: 3.2.0
+info:
+  title: Agent Verification Utility MCP API
+  version: 0.4.3
+  description: A deterministic, x402-paid JSON evidence verification service for external agents. The service attests that declared checks were executed; it does not attest real-world truth.
+  license:
+    name: UNLICENSED
+servers:
+- url: /
+  description: Relative to the current deployment origin
+security: []
+tags:
+- name: MCP
+  description: Stateless MCP Streamable HTTP transport
+paths:
+  /server.json:
+    get:
+      operationId: getMcpRegistryServer
+      summary: Get the official MCP Registry publication document
+      description: Remote-server metadata using the official MCP Registry server.json schema. The publication namespace is derived from the configured public domain.
+      tags:
+      - MCP
+      responses:
+        '200':
+          description: MCP Registry remote server document
+          content:
+            application/json:
+              schema:
+                type: object
+  /mcp/server.json:
+    get:
+      operationId: getMcpRegistryServerAlias
+      summary: Get the MCP Registry publication document beside the MCP endpoint
+      tags:
+      - MCP
+      responses:
+        '200':
+          description: The same MCP Registry document as /server.json
+          content:
+            application/json:
+              schema:
+                type: object
+  /.well-known/mcp-registry-auth:
+    get:
+      operationId: getMcpRegistryHttpProof
+      summary: Get the optional MCP Registry HTTP domain-ownership proof
+      description: Returns 404 until an operator generates a registry key and deploys its public proof. Private key material is never served.
+      tags:
+      - MCP
+      responses:
+        '200':
+          description: MCP Registry public proof record
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: Registry proof is not configured
+  /docs/mcp-x402-interoperability:
+    get:
+      operationId: getMcpX402InteroperabilityGuide
+      summary: Read the MCP and x402 interoperability guide
+      tags:
+      - MCP
+      responses:
+        '200':
+          $ref: '#/components/responses/KnowledgeDocument'
+  /webmcp.js:
+    get:
+      operationId: getWebMcpBridge
+      summary: Get the feature-detected browser WebMCP bridge
+      tags:
+      - MCP
+      responses:
+        '200':
+          description: Same-origin JavaScript bridge from WebMCP to the live MCP endpoint
+          content:
+            text/javascript:
+              schema:
+                type: string
+  /mcp/server-card:
+    get:
+      operationId: getCurrentMcpServerCard
+      summary: Get the current experimental MCP Server Card
+      description: Publishes the experimental MCP Server Card v1 document next to the Streamable HTTP endpoint. Tool inventory remains authoritative at runtime through tools/list.
+      tags:
+      - MCP
+      responses:
+        '200':
+          description: Experimental MCP Server Card
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Strong SHA-256 entity tag; If-None-Match is supported.
+          content:
+            application/mcp-server-card+json:
+              schema:
+                type: object
+                required:
+                - $schema
+                - name
+                - description
+                - version
+                - remotes
+                properties:
+                  $schema:
+                    type: string
+                    const: https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json
+                  name:
+                    type: string
+                    const: dev.kgninja/agent-verification-utility
+                  title:
+                    type: string
+                  description:
+                    type: string
+                    maxLength: 100
+                  version:
+                    type: string
+                  websiteUrl:
+                    type: string
+                    format: uri
+                  icons:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  remotes:
+                    type: array
+                    minItems: 1
+                    items:
+                      type: object
+                      additionalProperties: true
+                  _meta:
+                    type: object
+                    additionalProperties: true
+                additionalProperties: true
+        '304':
+          description: Not modified
+  /mcp:
+    post:
+      operationId: mcpStreamableHttp
+      summary: Stateless MCP SDK v2 Streamable HTTP endpoint
+      description: Exposes free discovery, revenue-goal, and quote tools plus the paid verify_evidence tool. The paid MCP tool uses x402 metadata and shares the audited POST /verify-evidence settlement and D1 ledger path.
+      tags:
+      - MCP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: MCP protocol response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+components:
+  responses:
+    BadRequest:
+      description: Malformed request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unavailable:
+      description: Kill switch, maintenance, budget exhaustion, facilitator outage, or unavailable cost basis
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    KnowledgeDocument:
+      description: Technical documentation with HTML and agent-optimized Markdown representations
+      headers:
+        Vary:
+          schema:
+            type: string
+            const: Accept
+        ETag:
+          schema:
+            type: string
+        X-Markdown-Tokens:
+          description: Approximate token count on the Markdown representation
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        text/html:
+          schema:
+            type: string
+        text/markdown:
+          schema:
+            type: string
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    Sha256Digest:
+      type: string
+      pattern: ^sha256:[a-f0-9]{64}$
+    RefusedPaidVerificationBinding:
+      allOf:
+      - $ref: '#/components/schemas/PaidVerificationBinding'
+      - properties:
+          state:
+            const: refused
+    PaidVerificationBinding:
+      type: object
+      description: The immutable spend binding. quoted/payment_required have no paid receipt or refusal; refused has a refusal reason and no paid receipt; delivered has a paid receipt and no refusal reason, including when deterministic verification outcome is fail.
+      additionalProperties: false
+      required:
+      - schema_version
+      - binding_digest
+      - precheck_receipt_digest
+      - request_hash
+      - evidence_digest
+      - policy_version
+      - price_cap_atomic
+      - quoted_amount_atomic
+      - network
+      - asset
+      - pay_to
+      - quote_id
+      - expires_at
+      - discovery_survived
+      - state
+      - paid_receipt_id
+      - refusal_reason
+      properties:
+        schema_version:
+          type: string
+          const: agent-economy/paid-verification-binding/1.0
+        binding_digest:
+          $ref: '#/components/schemas/Sha256Digest'
+        precheck_receipt_digest:
+          $ref: '#/components/schemas/Sha256Digest'
+        request_hash:
+          $ref: '#/components/schemas/Sha256Digest'
+        evidence_digest:
+          $ref: '#/components/schemas/Sha256Digest'
+        policy_version:
+          type: string
+          const: agent-economy/precheck-policy/2.0
+        price_cap_atomic:
+          type: string
+          maxLength: 16
+          pattern: ^[1-9][0-9]*$
+        quoted_amount_atomic:
+          type: string
+          maxLength: 16
+          pattern: ^[1-9][0-9]*$
+        network:
+          type: string
+          enum:
+          - eip155:84532
+          - eip155:8453
+        asset:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+        pay_to:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+        quote_id:
+          type: string
+          pattern: ^qte_[A-Za-z0-9_-]+$
+        expires_at:
+          type: string
+          format: date-time
+        discovery_survived:
+          type: boolean
+          const: true
+        state:
+          type: string
+          enum:
+          - quoted
+          - payment_required
+          - delivered
+          - refused
+        paid_receipt_id:
+          oneOf:
+          - type: string
+            pattern: ^rcpt_[A-Za-z0-9_-]+$
+          - type: 'null'
+        refusal_reason:
+          oneOf:
+          - type: string
+            pattern: ^[A-Z0-9_]+$
+          - type: 'null'
+      oneOf:
+      - properties:
+          state:
+            enum:
+            - quoted
+            - payment_required
+          paid_receipt_id:
+            type: 'null'
+          refusal_reason:
+            type: 'null'
+      - properties:
+          state:
+            const: delivered
+          paid_receipt_id:
+            type: string
+            pattern: ^rcpt_[A-Za-z0-9_-]+$
+          refusal_reason:
+            type: 'null'
+      - properties:
+          state:
+            const: refused
+          paid_receipt_id:
+            type: 'null'
+          refusal_reason:
+            type: string
+            pattern: ^[A-Z0-9_]+$
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+          - code
+          - message
+          - request_id
+          - retryable
+          properties:
+            code:
+              type: string
+              pattern: ^[A-Z0-9_]+$
+            message:
+              type: string
+            request_id:
+              type: string
+            retryable:
+              type: boolean
+            details:
+              type: object
+              properties:
+                paid_verification_binding:
+                  $ref: '#/components/schemas/RefusedPaidVerificationBinding'
+              additionalProperties: true
+  securitySchemes:
+    agentRegistration:
+      type: http
+      scheme: bearer
+      bearerFormat: signed anonymous registration receipt
+      description: Optional 15-minute service-local receipt used only to inspect its own registration claim. It grants no API access and does not authorize payment.

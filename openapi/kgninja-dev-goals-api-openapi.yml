@@ -1,0 +1,252 @@
+openapi: 3.2.0
+info:
+  title: Agent Verification Utility Goals API
+  version: 0.4.3
+  description: A deterministic, x402-paid JSON evidence verification service for external agents. The service attests that declared checks were executed; it does not attest real-world truth.
+  license:
+    name: UNLICENSED
+servers:
+- url: /
+  description: Relative to the current deployment origin
+security: []
+tags:
+- name: Goals
+  description: Goal-driven revenue measurement and improvement recommendations
+paths:
+  /goal:
+    get:
+      operationId: getRevenueGoalStatus
+      summary: Get the active revenue goal and next improvement
+      description: Returns privacy-safe funnel metrics, conservative contribution margin, goal progress, and the next bounded improvement recommendation. Reading this resource never changes price, spends funds, or sends messages.
+      tags:
+      - Goals
+      responses:
+        '200':
+          description: Active goal status or not_configured
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevenueGoalStatus'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /.well-known/revenue-goal.json:
+    get:
+      operationId: getWellKnownRevenueGoalStatus
+      summary: Get the revenue goal status from a well-known alias
+      tags:
+      - Goals
+      responses:
+        '200':
+          description: The same goal status document as /goal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevenueGoalStatus'
+components:
+  responses:
+    Unavailable:
+      description: Kill switch, maintenance, budget exhaustion, facilitator outage, or unavailable cost basis
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    Sha256Digest:
+      type: string
+      pattern: ^sha256:[a-f0-9]{64}$
+    RefusedPaidVerificationBinding:
+      allOf:
+      - $ref: '#/components/schemas/PaidVerificationBinding'
+      - properties:
+          state:
+            const: refused
+    PaidVerificationBinding:
+      type: object
+      description: The immutable spend binding. quoted/payment_required have no paid receipt or refusal; refused has a refusal reason and no paid receipt; delivered has a paid receipt and no refusal reason, including when deterministic verification outcome is fail.
+      additionalProperties: false
+      required:
+      - schema_version
+      - binding_digest
+      - precheck_receipt_digest
+      - request_hash
+      - evidence_digest
+      - policy_version
+      - price_cap_atomic
+      - quoted_amount_atomic
+      - network
+      - asset
+      - pay_to
+      - quote_id
+      - expires_at
+      - discovery_survived
+      - state
+      - paid_receipt_id
+      - refusal_reason
+      properties:
+        schema_version:
+          type: string
+          const: agent-economy/paid-verification-binding/1.0
+        binding_digest:
+          $ref: '#/components/schemas/Sha256Digest'
+        precheck_receipt_digest:
+          $ref: '#/components/schemas/Sha256Digest'
+        request_hash:
+          $ref: '#/components/schemas/Sha256Digest'
+        evidence_digest:
+          $ref: '#/components/schemas/Sha256Digest'
+        policy_version:
+          type: string
+          const: agent-economy/precheck-policy/2.0
+        price_cap_atomic:
+          type: string
+          maxLength: 16
+          pattern: ^[1-9][0-9]*$
+        quoted_amount_atomic:
+          type: string
+          maxLength: 16
+          pattern: ^[1-9][0-9]*$
+        network:
+          type: string
+          enum:
+          - eip155:84532
+          - eip155:8453
+        asset:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+        pay_to:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+        quote_id:
+          type: string
+          pattern: ^qte_[A-Za-z0-9_-]+$
+        expires_at:
+          type: string
+          format: date-time
+        discovery_survived:
+          type: boolean
+          const: true
+        state:
+          type: string
+          enum:
+          - quoted
+          - payment_required
+          - delivered
+          - refused
+        paid_receipt_id:
+          oneOf:
+          - type: string
+            pattern: ^rcpt_[A-Za-z0-9_-]+$
+          - type: 'null'
+        refusal_reason:
+          oneOf:
+          - type: string
+            pattern: ^[A-Z0-9_]+$
+          - type: 'null'
+      oneOf:
+      - properties:
+          state:
+            enum:
+            - quoted
+            - payment_required
+          paid_receipt_id:
+            type: 'null'
+          refusal_reason:
+            type: 'null'
+      - properties:
+          state:
+            const: delivered
+          paid_receipt_id:
+            type: string
+            pattern: ^rcpt_[A-Za-z0-9_-]+$
+          refusal_reason:
+            type: 'null'
+      - properties:
+          state:
+            const: refused
+          paid_receipt_id:
+            type: 'null'
+          refusal_reason:
+            type: string
+            pattern: ^[A-Z0-9_]+$
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+          - code
+          - message
+          - request_id
+          - retryable
+          properties:
+            code:
+              type: string
+              pattern: ^[A-Z0-9_]+$
+            message:
+              type: string
+            request_id:
+              type: string
+            retryable:
+              type: boolean
+            details:
+              type: object
+              properties:
+                paid_verification_binding:
+                  $ref: '#/components/schemas/RefusedPaidVerificationBinding'
+              additionalProperties: true
+    RevenueGoalStatus:
+      type: object
+      required:
+      - schema_version
+      - status
+      - generated_at
+      properties:
+        schema_version:
+          type: string
+          const: agent-economy/revenue-goal/1.0
+        status:
+          type: string
+          enum:
+          - not_configured
+          - active
+          - paused
+          - completed
+          - expired
+        goal:
+          type: object
+          additionalProperties: true
+        measurement:
+          type: object
+          additionalProperties: true
+        progress:
+          type: object
+          additionalProperties: true
+        next_improvement:
+          type: object
+          additionalProperties: true
+        latest_evaluation:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+        message:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+      additionalProperties: true
+  securitySchemes:
+    agentRegistration:
+      type: http
+      scheme: bearer
+      bearerFormat: signed anonymous registration receipt
+      description: Optional 15-minute service-local receipt used only to inspect its own registration claim. It grants no API access and does not authorize payment.

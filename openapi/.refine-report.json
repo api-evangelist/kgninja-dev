@@ -1,0 +1,26 @@
+{
+  "provider": "kgninja-dev",
+  "sources": [
+    "kgninja-dev-openapi.json"
+  ],
+  "outputs": [
+    "kgninja-dev-a2a-api-openapi.yml",
+    "kgninja-dev-decision-support-api-openapi.yml",
+    "kgninja-dev-discovery-api-openapi.yml",
+    "kgninja-dev-goals-api-openapi.yml",
+    "kgninja-dev-mcp-api-openapi.yml",
+    "kgninja-dev-operations-api-openapi.yml",
+    "kgninja-dev-purchase-api-openapi.yml",
+    "kgninja-dev-registration-api-openapi.yml"
+  ],
+  "archived": [
+    "archived openapi/kgninja-dev-openapi.json"
+  ],
+  "errors": [],
+  "warnings": [],
+  "notes": [
+    "kgninja-dev-openapi.json: upgraded openapi 3.1.0 -> OpenAPI 3.2.0",
+    "apis.yml register: written (+8 apis, 10 total)"
+  ],
+  "skipped": []
+}

@@ -1,0 +1,71 @@
+openapi: 3.2.0
+info:
+  title: Agent Verification Utility A2a API
+  version: 0.4.3
+  description: A deterministic, x402-paid JSON evidence verification service for external agents. The service attests that declared checks were executed; it does not attest real-world truth.
+  license:
+    name: UNLICENSED
+servers:
+- url: /
+  description: Relative to the current deployment origin
+security: []
+tags:
+- name: a2a
+  description: Synchronous A2A 1.0 JSON-RPC quote preparation
+paths:
+  /.well-known/agent-card.json:
+    get:
+      operationId: getA2aAgentCard
+      summary: Get the A2A 1.0 Agent Card
+      description: Advertises the synchronous JSON-RPC interface and its bounded quote-preparation skill.
+      tags:
+      - a2a
+      responses:
+        '200':
+          description: A2A Agent Card
+          content:
+            application/json:
+              schema:
+                type: object
+  /a2a:
+    post:
+      operationId: sendA2aMessage
+      summary: Use the A2A 1.0 JSON-RPC interface
+      description: Implements A2A 1.0 SendMessage for idempotent quote preparation. The message must contain one application/json data part with idempotency_key and intent; intent includes the unchanged request and spend policy plus the digest returned by the free precheck. The returned agent message contains a bound quote and purchase instructions; it does not execute paid work. Because this adapter never creates A2A Tasks, ListTasks returns an empty collection while GetTask and CancelTask return TaskNotFoundError. Streaming, push notifications, and extended cards return their capability-specific A2A errors.
+      tags:
+      - a2a
+      parameters:
+      - name: A2A-Version
+        in: header
+        required: true
+        schema:
+          type: string
+          const: '1.0'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: JSON-RPC result or error
+          headers:
+            A2A-Version:
+              required: true
+              schema:
+                type: string
+                const: '1.0'
+          content:
+            application/json:
+              schema:
+                type: object
+        '405':
+          description: Only POST is supported
+components:
+  securitySchemes:
+    agentRegistration:
+      type: http
+      scheme: bearer
+      bearerFormat: signed anonymous registration receipt
+      description: Optional 15-minute service-local receipt used only to inspect its own registration claim. It grants no API access and does not authorize payment.

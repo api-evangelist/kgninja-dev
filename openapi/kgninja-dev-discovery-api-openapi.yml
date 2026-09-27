@@ -1,0 +1,1508 @@
+openapi: 3.2.0
+info:
+  title: Agent Verification Utility Discovery API
+  version: 0.4.3
+  description: A deterministic, x402-paid JSON evidence verification service for external agents. The service attests that declared checks were executed; it does not attest real-world truth.
+  license:
+    name: UNLICENSED
+servers:
+- url: /
+  description: Relative to the current deployment origin
+security: []
+tags:
+- name: Discovery
+  description: Machine-readable service discovery
+paths:
+  /:
+    get:
+      operationId: getLandingPage
+      summary: Get the human- and agent-readable service index
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: Lightweight service index
+          content:
+            text/html:
+              schema:
+                type: string
+            text/markdown:
+              schema:
+                type: string
+              description: Returned when text/markdown is the preferred Accept media type.
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /auth.md:
+    get:
+      operationId: getAuthenticationGuide
+      summary: Get agent registration, anonymous-access, and x402 guidance
+      description: Explains optional anonymous registration, credential inspection, anonymous service access, per-request x402 authorization, and why OAuth metadata is not published.
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: Markdown access and payment-authorization guide
+          content:
+            text/markdown:
+              schema:
+                type: string
+  /.well-known/agent-card.json:
+    get:
+      operationId: getA2aAgentCard
+      summary: Get the A2A 1.0 Agent Card
+      description: Advertises the synchronous JSON-RPC interface and its bounded quote-preparation skill.
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: A2A Agent Card
+          content:
+            application/json:
+              schema:
+                type: object
+  /.well-known/openapi.json:
+    get:
+      operationId: getWellKnownOpenApi
+      summary: Get the OpenAPI document from a well-known alias
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: The same OpenAPI 3.1 document as /openapi.json
+          content:
+            application/json:
+              schema:
+                type: object
+  /server.json:
+    get:
+      operationId: getMcpRegistryServer
+      summary: Get the official MCP Registry publication document
+      description: Remote-server metadata using the official MCP Registry server.json schema. The publication namespace is derived from the configured public domain.
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: MCP Registry remote server document
+          content:
+            application/json:
+              schema:
+                type: object
+  /mcp/server.json:
+    get:
+      operationId: getMcpRegistryServerAlias
+      summary: Get the MCP Registry publication document beside the MCP endpoint
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: The same MCP Registry document as /server.json
+          content:
+            application/json:
+              schema:
+                type: object
+  /.well-known/mcp-registry-auth:
+    get:
+      operationId: getMcpRegistryHttpProof
+      summary: Get the optional MCP Registry HTTP domain-ownership proof
+      description: Returns 404 until an operator generates a registry key and deploys its public proof. Private key material is never served.
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: MCP Registry public proof record
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: Registry proof is not configured
+  /docs/deterministic-json-verification:
+    get:
+      operationId: getDeterministicVerificationGuide
+      summary: Read the deterministic JSON verification guide
+      tags:
+      - Discovery
+      responses:
+        '200':
+          $ref: '#/components/responses/KnowledgeDocument'
+  /docs/reproducible-x402-receipts:
+    get:
+      operationId: getReproducibleReceiptGuide
+      summary: Read the x402 receipt and signed-evidence guide
+      tags:
+      - Discovery
+      responses:
+        '200':
+          $ref: '#/components/responses/KnowledgeDocument'
+  /docs/mcp-x402-interoperability:
+    get:
+      operationId: getMcpX402InteroperabilityGuide
+      summary: Read the MCP and x402 interoperability guide
+      tags:
+      - Discovery
+      responses:
+        '200':
+          $ref: '#/components/responses/KnowledgeDocument'
+  /docs/security-and-trust:
+    get:
+      operationId: getSecurityTrustGuide
+      summary: Read the security, privacy, and trust-boundary guide
+      tags:
+      - Discovery
+      responses:
+        '200':
+          $ref: '#/components/responses/KnowledgeDocument'
+  /faq:
+    get:
+      operationId: getFrequentlyAskedQuestions
+      summary: Read machine-indexable answers about scope, payment, and trust
+      tags:
+      - Discovery
+      responses:
+        '200':
+          $ref: '#/components/responses/KnowledgeDocument'
+  /webmcp.js:
+    get:
+      operationId: getWebMcpBridge
+      summary: Get the feature-detected browser WebMCP bridge
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: Same-origin JavaScript bridge from WebMCP to the live MCP endpoint
+          content:
+            text/javascript:
+              schema:
+                type: string
+  /12ffcf699b4a1cecdfe4f30a0bc795705169b8c87d475a49.txt:
+    get:
+      operationId: getIndexNowOwnershipKey
+      summary: Get the IndexNow host-ownership key
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: Public key used by IndexNow participants to verify URL-submission ownership
+          content:
+            text/plain:
+              schema:
+                type: string
+  /verification-recipes.json:
+    get:
+      operationId: getVerificationRecipes
+      summary: Get deterministic verification use-case recipes
+      description: Explains when to use or avoid the utility, the risk each recipe reduces, its limitations, a free precheck, the paid execution path, and result interpretation. Recipe checks operate only over supplied bytes and perform no on-chain lookup.
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: Stable versioned verification recipe document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationRecipes'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /.well-known/verification-recipes.json:
+    get:
+      operationId: getWellKnownVerificationRecipes
+      summary: Get verification recipes from the well-known alias
+      description: Returns HTTP 200 with the same JSON document as /verification-recipes.json; it is not a redirect.
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: The same verification recipe document as /verification-recipes.json
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationRecipes'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /.well-known/revenue-goal.json:
+    get:
+      operationId: getWellKnownRevenueGoalStatus
+      summary: Get the revenue goal status from a well-known alias
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: The same goal status document as /goal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevenueGoalStatus'
+  /agent.json:
+    get:
+      operationId: getAgentManifest
+      summary: Get the product-specific agent service manifest
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: Agent service manifest
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentManifest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /.well-known/x402:
+    get:
+      operationId: getX402Manifest
+      summary: Get the self-hosted x402 convenience manifest
+      description: This convenience URL is not represented as a universal x402 discovery standard. Bazaar metadata in the live 402 is the ecosystem discovery mechanism.
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: x402 resource metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/X402Manifest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /.well-known/api-catalog:
+    get:
+      operationId: getApiCatalog
+      summary: Get the RFC 9727 API catalog
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: RFC 9727 Linkset catalog for automated API discovery
+          headers:
+            Link:
+              schema:
+                type: string
+              description: api-catalog link relation
+          content:
+            application/linkset+json:
+              schema:
+                type: object
+                required:
+                - linkset
+                properties:
+                  linkset:
+                    type: array
+                    minItems: 1
+                    items:
+                      type: object
+                      additionalProperties: true
+  /.well-known/ai-catalog.json:
+    get:
+      operationId: getAiCatalog
+      summary: Discover the service and its decision-support entry points
+      description: AI Catalog 1.0 document for domain-level MCP server-card discovery, including a namespaced vendor extension for verification recipes and the free precheck.
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: AI Catalog
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Strong SHA-256 entity tag; If-None-Match is supported.
+          content:
+            application/ai-catalog+json:
+              schema:
+                type: object
+                required:
+                - specVersion
+                - entries
+                properties:
+                  specVersion:
+                    type: string
+                    const: '1.0'
+                  entries:
+                    type: array
+                    minItems: 1
+                    items:
+                      type: object
+                      required:
+                      - identifier
+                      - type
+                      - url
+                      properties:
+                        identifier:
+                          type: string
+                          format: uri
+                        type:
+                          type: string
+                          const: application/mcp-server-card+json
+                        url:
+                          type: string
+                          format: uri
+                        extensions:
+                          type: object
+                          properties:
+                            dev.kgninja.decisionSupport:
+                              type: object
+                              additionalProperties: false
+                              required:
+                              - verificationRecipesUrl
+                              - freePrecheckUrl
+                              - freePrecheckMethod
+                              - paidExecutionAutomatic
+                              properties:
+                                verificationRecipesUrl:
+                                  type: string
+                                  format: uri
+                                freePrecheckUrl:
+                                  type: string
+                                  format: uri
+                                freePrecheckMethod:
+                                  type: string
+                                  const: POST
+                                paidExecutionAutomatic:
+                                  type: boolean
+                                  const: false
+        '304':
+          description: Not modified
+  /mcp/server-card:
+    get:
+      operationId: getCurrentMcpServerCard
+      summary: Get the current experimental MCP Server Card
+      description: Publishes the experimental MCP Server Card v1 document next to the Streamable HTTP endpoint. Tool inventory remains authoritative at runtime through tools/list.
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: Experimental MCP Server Card
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Strong SHA-256 entity tag; If-None-Match is supported.
+          content:
+            application/mcp-server-card+json:
+              schema:
+                type: object
+                required:
+                - $schema
+                - name
+                - description
+                - version
+                - remotes
+                properties:
+                  $schema:
+                    type: string
+                    const: https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json
+                  name:
+                    type: string
+                    const: dev.kgninja/agent-verification-utility
+                  title:
+                    type: string
+                  description:
+                    type: string
+                    maxLength: 100
+                  version:
+                    type: string
+                  websiteUrl:
+                    type: string
+                    format: uri
+                  icons:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  remotes:
+                    type: array
+                    minItems: 1
+                    items:
+                      type: object
+                      additionalProperties: true
+                  _meta:
+                    type: object
+                    additionalProperties: true
+                additionalProperties: true
+        '304':
+          description: Not modified
+  /.well-known/mcp/server-card.json:
+    get:
+      operationId: getAgentReadinessMcpServerCard
+      summary: Get the Cloudflare Agent Readiness MCP card
+      description: Compatibility document using the earlier MCP card shape recommended by Cloudflare Agent Readiness. New clients should discover /mcp/server-card through /.well-known/ai-catalog.json.
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: Draft MCP Server Card
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - $schema
+                - version
+                - protocolVersion
+                - serverInfo
+                - transport
+                - authentication
+                - tools
+                properties:
+                  $schema:
+                    type: string
+                    format: uri
+                  version:
+                    type: string
+                  protocolVersion:
+                    type: string
+                  serverInfo:
+                    type: object
+                    additionalProperties: true
+                  transport:
+                    type: object
+                    additionalProperties: true
+                  authentication:
+                    type: object
+                    additionalProperties: true
+                  tools:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+  /.well-known/mcp.json:
+    get:
+      operationId: getMcpServerCardCompatibilityAlias
+      summary: Get the draft MCP Server Card compatibility alias
+      description: Returns the same card as /.well-known/mcp/server-card.json for clients following Cloudflare's managed MCP server examples.
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: Draft MCP Server Card
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /.well-known/agent-skills/index.json:
+    get:
+      operationId: getAgentSkillsIndex
+      summary: Discover published Agent Skills
+      description: Draft Cloudflare Agent Skills Discovery v0.2.0 index with SHA-256 artifact integrity.
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: Agent Skills discovery index
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - $schema
+                - skills
+                properties:
+                  $schema:
+                    type: string
+                    format: uri
+                  skills:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - name
+                      - type
+                      - description
+                      - url
+                      - digest
+                      properties:
+                        name:
+                          type: string
+                        type:
+                          type: string
+                          const: skill-md
+                        description:
+                          type: string
+                        url:
+                          type: string
+                          format: uri
+                        digest:
+                          type: string
+                          pattern: ^sha256:[a-f0-9]{64}$
+  /.well-known/agent-skills/verify-json-evidence/SKILL.md:
+    get:
+      operationId: getVerifyJsonEvidenceSkill
+      summary: Get the verify-json-evidence Agent Skill
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: Agent Skills-compatible Markdown instructions
+          content:
+            text/markdown:
+              schema:
+                type: string
+  /.well-known/jwks.json:
+    get:
+      operationId: getEvidenceJwks
+      summary: Get public keys for verification evidence
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: JSON Web Key Set containing active public evidence keys
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Jwks'
+  /llms.txt:
+    get:
+      operationId: getLlmsIndex
+      summary: Get the compact LLM-oriented service index
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: Compact Markdown service index
+          content:
+            text/markdown:
+              schema:
+                type: string
+  /llms-full.txt:
+    get:
+      operationId: getLlmsFullIndex
+      summary: Get complete LLM-oriented usage guidance
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: Detailed Markdown service instructions
+          content:
+            text/markdown:
+              schema:
+                type: string
+  /index.md:
+    get:
+      operationId: getMarkdownServiceGuide
+      summary: Get the canonical Markdown service guide
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: Detailed Markdown service instructions
+          content:
+            text/markdown:
+              schema:
+                type: string
+  /icon.svg:
+    get:
+      operationId: getServiceIcon
+      summary: Get the service icon referenced by the MCP Server Card
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: SVG service icon
+          content:
+            image/svg+xml:
+              schema:
+                type: string
+  /robots.txt:
+    get:
+      operationId: getRobots
+      summary: Get crawler access policy and discovery hints
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: Crawler policy
+          content:
+            text/plain:
+              schema:
+                type: string
+  /sitemap.xml:
+    get:
+      operationId: getSitemap
+      summary: Get the public service discovery sitemap
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: XML sitemap for public machine-readable entry points
+          content:
+            application/xml:
+              schema:
+                type: string
+  /openapi.json:
+    get:
+      operationId: getOpenApi
+      summary: Get this OpenAPI document
+      tags:
+      - Discovery
+      responses:
+        '200':
+          description: OpenAPI 3.1 JSON
+          content:
+            application/json:
+              schema:
+                type: object
+        '429':
+          $ref: '#/components/responses/RateLimited'
+components:
+  responses:
+    Unavailable:
+      description: Kill switch, maintenance, budget exhaustion, facilitator outage, or unavailable cost basis
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    KnowledgeDocument:
+      description: Technical documentation with HTML and agent-optimized Markdown representations
+      headers:
+        Vary:
+          schema:
+            type: string
+            const: Accept
+        ETag:
+          schema:
+            type: string
+        X-Markdown-Tokens:
+          description: Approximate token count on the Markdown representation
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        text/html:
+          schema:
+            type: string
+        text/markdown:
+          schema:
+            type: string
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    Assertion:
+      oneOf:
+      - $ref: '#/components/schemas/Sha256EqualsAssertion'
+      - $ref: '#/components/schemas/JsonPointerExistsAssertion'
+      - $ref: '#/components/schemas/JsonPointerEqualsAssertion'
+      - $ref: '#/components/schemas/JsonTypeIsAssertion'
+      discriminator:
+        propertyName: op
+    X402Manifest:
+      type: object
+      required:
+      - x402Version
+      - payment_mode
+      - simulation
+      - simulation_notice
+      - resources
+      properties:
+        x402Version:
+          type: integer
+          const: 2
+        payment_mode:
+          type: string
+          enum:
+          - mock
+          - x402
+          - disabled
+        simulation:
+          type: boolean
+        simulation_notice:
+          type:
+          - string
+          - 'null'
+        resources:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+            - resource
+            - method
+            - accepts
+            properties:
+              resource:
+                type: string
+                format: uri
+              method:
+                type: string
+                const: POST
+              accepts:
+                type: array
+                items:
+                  $ref: '#/components/schemas/X402PaymentRequirement'
+              extensions:
+                type: object
+                additionalProperties: true
+    RevenueGoalStatus:
+      type: object
+      required:
+      - schema_version
+      - status
+      - generated_at
+      properties:
+        schema_version:
+          type: string
+          const: agent-economy/revenue-goal/1.0
+        status:
+          type: string
+          enum:
+          - not_configured
+          - active
+          - paused
+          - completed
+          - expired
+        goal:
+          type: object
+          additionalProperties: true
+        measurement:
+          type: object
+          additionalProperties: true
+        progress:
+          type: object
+          additionalProperties: true
+        next_improvement:
+          type: object
+          additionalProperties: true
+        latest_evaluation:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+        message:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+      additionalProperties: true
+    Jwks:
+      type: object
+      additionalProperties: false
+      required:
+      - keys
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - kty
+            - crv
+            - x
+            - alg
+            - use
+            - key_ops
+            - kid
+            properties:
+              kty:
+                type: string
+                const: OKP
+              crv:
+                type: string
+                const: Ed25519
+              x:
+                type: string
+              alg:
+                type: string
+                const: EdDSA
+              use:
+                type: string
+                const: sig
+              key_ops:
+                type: array
+                items:
+                  type: string
+                  const: verify
+              kid:
+                type: string
+                format: uri-reference
+    InlineJsonEvidence:
+      type: object
+      additionalProperties: false
+      required:
+      - media_type
+      - content_base64
+      properties:
+        media_type:
+          type: string
+          const: application/json
+        content_base64:
+          type: string
+          contentEncoding: base64
+          contentMediaType: application/json
+          maxLength: 87384
+          description: Strict Base64. Decoded UTF-8 JSON must be between 1 byte and 65536 bytes.
+    JsonPointerEqualsAssertion:
+      type: object
+      additionalProperties: false
+      required:
+      - op
+      - path
+      - expected
+      properties:
+        op:
+          type: string
+          const: json_pointer_equals
+        path:
+          $ref: '#/components/schemas/JsonPointer'
+        expected:
+          description: Any JSON value. Equality is deterministic structural JSON equality.
+    Sha256Digest:
+      type: string
+      pattern: ^sha256:[a-f0-9]{64}$
+    Price:
+      type: object
+      additionalProperties: false
+      required:
+      - amount
+      - asset
+      - symbol
+      - decimals
+      - network
+      properties:
+        amount:
+          type: string
+          pattern: ^[0-9]+$
+          examples:
+          - '10000'
+        asset:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+        symbol:
+          type: string
+          const: USDC
+        decimals:
+          type: integer
+          const: 6
+        network:
+          type: string
+          enum:
+          - eip155:84532
+          - eip155:8453
+    PaidVerificationBinding:
+      type: object
+      description: The immutable spend binding. quoted/payment_required have no paid receipt or refusal; refused has a refusal reason and no paid receipt; delivered has a paid receipt and no refusal reason, including when deterministic verification outcome is fail.
+      additionalProperties: false
+      required:
+      - schema_version
+      - binding_digest
+      - precheck_receipt_digest
+      - request_hash
+      - evidence_digest
+      - policy_version
+      - price_cap_atomic
+      - quoted_amount_atomic
+      - network
+      - asset
+      - pay_to
+      - quote_id
+      - expires_at
+      - discovery_survived
+      - state
+      - paid_receipt_id
+      - refusal_reason
+      properties:
+        schema_version:
+          type: string
+          const: agent-economy/paid-verification-binding/1.0
+        binding_digest:
+          $ref: '#/components/schemas/Sha256Digest'
+        precheck_receipt_digest:
+          $ref: '#/components/schemas/Sha256Digest'
+        request_hash:
+          $ref: '#/components/schemas/Sha256Digest'
+        evidence_digest:
+          $ref: '#/components/schemas/Sha256Digest'
+        policy_version:
+          type: string
+          const: agent-economy/precheck-policy/2.0
+        price_cap_atomic:
+          type: string
+          maxLength: 16
+          pattern: ^[1-9][0-9]*$
+        quoted_amount_atomic:
+          type: string
+          maxLength: 16
+          pattern: ^[1-9][0-9]*$
+        network:
+          type: string
+          enum:
+          - eip155:84532
+          - eip155:8453
+        asset:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+        pay_to:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+        quote_id:
+          type: string
+          pattern: ^qte_[A-Za-z0-9_-]+$
+        expires_at:
+          type: string
+          format: date-time
+        discovery_survived:
+          type: boolean
+          const: true
+        state:
+          type: string
+          enum:
+          - quoted
+          - payment_required
+          - delivered
+          - refused
+        paid_receipt_id:
+          oneOf:
+          - type: string
+            pattern: ^rcpt_[A-Za-z0-9_-]+$
+          - type: 'null'
+        refusal_reason:
+          oneOf:
+          - type: string
+            pattern: ^[A-Z0-9_]+$
+          - type: 'null'
+      oneOf:
+      - properties:
+          state:
+            enum:
+            - quoted
+            - payment_required
+          paid_receipt_id:
+            type: 'null'
+          refusal_reason:
+            type: 'null'
+      - properties:
+          state:
+            const: delivered
+          paid_receipt_id:
+            type: string
+            pattern: ^rcpt_[A-Za-z0-9_-]+$
+          refusal_reason:
+            type: 'null'
+      - properties:
+          state:
+            const: refused
+          paid_receipt_id:
+            type: 'null'
+          refusal_reason:
+            type: string
+            pattern: ^[A-Z0-9_]+$
+    VerifyEvidenceRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - client_request_id
+      - evidence
+      - assertions
+      properties:
+        client_request_id:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: ^[A-Za-z0-9._:-]+$
+        evidence:
+          $ref: '#/components/schemas/InlineJsonEvidence'
+        assertions:
+          type: array
+          minItems: 1
+          maxItems: 16
+          items:
+            $ref: '#/components/schemas/Assertion'
+    VerificationRecipes:
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - service
+      - version
+      - stable_document_marker
+      - recipes
+      - important_notice
+      properties:
+        schema_version:
+          type: string
+          const: agent-economy/verification-recipes/1.0
+        service:
+          type: string
+          const: agent-verification-utility
+        version:
+          type: string
+        stable_document_marker:
+          type: string
+        important_notice:
+          type: string
+        recipes:
+          type: array
+          minItems: 3
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - id
+            - title
+            - description
+            - use_when
+            - do_not_use_when
+            - risk_reduced
+            - limitations
+            - free_precheck
+            - paid_execution
+            - price
+            - network
+            - supported_assertions
+            - request_example
+            - precheck_intent_example
+            - expected_output_summary
+            - mcp_tool
+            - http_endpoint
+            - jwks_url
+            - agent_skill_url
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              description:
+                type: string
+              use_when:
+                type: array
+                minItems: 1
+                items:
+                  type: string
+              do_not_use_when:
+                type: array
+                minItems: 1
+                items:
+                  type: string
+              risk_reduced:
+                type: string
+              limitations:
+                type: array
+                minItems: 1
+                items:
+                  type: string
+              free_precheck:
+                type: object
+                additionalProperties: true
+              paid_execution:
+                type: object
+                additionalProperties: true
+              price:
+                type: object
+                additionalProperties: true
+              network:
+                type: string
+                enum:
+                - eip155:84532
+                - eip155:8453
+              supported_assertions:
+                type: array
+                items:
+                  type: string
+                  enum:
+                  - sha256_equals
+                  - json_pointer_exists
+                  - json_pointer_equals
+                  - json_type_is
+              request_example:
+                $ref: '#/components/schemas/VerifyEvidenceRequest'
+              precheck_intent_example:
+                $ref: '#/components/schemas/VerificationPrecheckIntent'
+              expected_output_summary:
+                type: string
+              mcp_tool:
+                type: string
+                const: verify_evidence
+              http_endpoint:
+                type: string
+                format: uri
+              jwks_url:
+                type: string
+                format: uri
+              agent_skill_url:
+                type: string
+                format: uri
+    JsonPointer:
+      type: string
+      maxLength: 512
+      description: RFC 6901 JSON Pointer; the empty string addresses the whole document.
+    RefusedPaidVerificationBinding:
+      allOf:
+      - $ref: '#/components/schemas/PaidVerificationBinding'
+      - properties:
+          state:
+            const: refused
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+          - code
+          - message
+          - request_id
+          - retryable
+          properties:
+            code:
+              type: string
+              pattern: ^[A-Z0-9_]+$
+            message:
+              type: string
+            request_id:
+              type: string
+            retryable:
+              type: boolean
+            details:
+              type: object
+              properties:
+                paid_verification_binding:
+                  $ref: '#/components/schemas/RefusedPaidVerificationBinding'
+              additionalProperties: true
+    Sha256EqualsAssertion:
+      type: object
+      additionalProperties: false
+      required:
+      - op
+      - expected_hex
+      properties:
+        op:
+          type: string
+          const: sha256_equals
+        expected_hex:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+    VerificationSpendPolicy:
+      type: object
+      additionalProperties: false
+      required:
+      - policy_version
+      - max_amount_atomic
+      - network
+      - asset
+      - pay_to
+      properties:
+        policy_version:
+          type: string
+          const: agent-economy/precheck-policy/2.0
+        max_amount_atomic:
+          type: string
+          maxLength: 16
+          pattern: ^[1-9][0-9]*$
+          description: Client-authorized maximum price in atomic USDC units. It must fit in the JavaScript safe-integer range.
+        network:
+          type: string
+          enum:
+          - eip155:84532
+          - eip155:8453
+        asset:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+        pay_to:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+    X402PaymentRequirement:
+      type: object
+      required:
+      - scheme
+      - network
+      - amount
+      - asset
+      - payTo
+      - maxTimeoutSeconds
+      properties:
+        scheme:
+          type: string
+          const: exact
+        network:
+          type: string
+          enum:
+          - eip155:84532
+          - eip155:8453
+        amount:
+          type: string
+          const: '10000'
+        asset:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+        payTo:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+        maxTimeoutSeconds:
+          type: integer
+          minimum: 1
+        extra:
+          type: object
+          additionalProperties: true
+      additionalProperties: false
+    JsonTypeIsAssertion:
+      type: object
+      additionalProperties: false
+      required:
+      - op
+      - path
+      - expected_type
+      properties:
+        op:
+          type: string
+          const: json_type_is
+        path:
+          $ref: '#/components/schemas/JsonPointer'
+        expected_type:
+          type: string
+          enum:
+          - 'null'
+          - boolean
+          - number
+          - string
+          - array
+          - object
+    VerificationKey:
+      type: object
+      required:
+      - kid
+      - alg
+      - publicKeyJwk
+      - not_before
+      properties:
+        kid:
+          type: string
+        alg:
+          type: string
+          const: Ed25519
+        publicKeyJwk:
+          type: object
+          required:
+          - kty
+          - crv
+          - x
+          properties:
+            kty:
+              type: string
+              const: OKP
+            crv:
+              type: string
+              const: Ed25519
+            x:
+              type: string
+            alg:
+              type: string
+              const: EdDSA
+            use:
+              type: string
+              const: sig
+            key_ops:
+              type: array
+              items:
+                type: string
+                const: verify
+          additionalProperties: false
+        not_before:
+          type: string
+          format: date-time
+        not_after:
+          type: string
+          format: date-time
+    JsonPointerExistsAssertion:
+      type: object
+      additionalProperties: false
+      required:
+      - op
+      - path
+      properties:
+        op:
+          type: string
+          const: json_pointer_exists
+        path:
+          $ref: '#/components/schemas/JsonPointer'
+    AgentManifest:
+      type: object
+      required:
+      - schema_version
+      - id
+      - name
+      - version
+      - offer_generation_id
+      - availability
+      - capabilities
+      - endpoints
+      - decision_support
+      - protocols
+      - operator_identity
+      - payment
+      - payment_mode
+      - simulation_notice
+      - verification_keys
+      - constraints
+      - trust_boundaries
+      properties:
+        schema_version:
+          type: string
+          const: agent-economy/1.0
+        id:
+          type: string
+          const: agent-verification-utility
+        name:
+          type: string
+        version:
+          type: string
+        offer_generation_id:
+          type: string
+          pattern: ^agent-economy/offer-generation/[0-9]+\.[0-9]+\.[0-9]+$
+        description:
+          type: string
+        availability:
+          type: string
+          enum:
+          - available
+          - degraded
+          - disabled
+        capabilities:
+          type: array
+          items:
+            type: string
+        endpoints:
+          type: object
+          additionalProperties:
+            type: string
+            format: uri
+        decision_support:
+          type: object
+          additionalProperties: false
+          required:
+          - when_to_use
+          - when_not_to_use
+          - free_precheck
+          - precheck_receipt
+          - recommended_paid_flow
+          - recipes
+          properties:
+            when_to_use:
+              type: array
+              items:
+                type: string
+            when_not_to_use:
+              type: array
+              items:
+                type: string
+            free_precheck:
+              type: string
+              format: uri
+            precheck_receipt:
+              type: object
+              additionalProperties: false
+              required:
+              - schema_version
+              - policy_version
+              - attestation_level
+              - explicit_payment_authorization_required
+              - refusal_allowed
+              - paid_binding_required
+              properties:
+                schema_version:
+                  type: string
+                  const: agent-economy/precheck-receipt/2.0
+                policy_version:
+                  type: string
+                  const: agent-economy/precheck-policy/2.0
+                attestation_level:
+                  type: string
+                  const: unsigned_precheck
+                explicit_payment_authorization_required:
+                  type: boolean
+                  const: true
+                refusal_allowed:
+                  type: boolean
+                  const: true
+                paid_binding_required:
+                  type: boolean
+                  const: true
+            recommended_paid_flow:
+              type: object
+              additionalProperties: false
+              required:
+              - purpose
+              - steps
+              - paid_execution
+              - price_atomic
+              - asset
+              - network
+              properties:
+                purpose:
+                  type: string
+                steps:
+                  type: array
+                  minItems: 5
+                  maxItems: 5
+                  items:
+                    type: string
+                paid_execution:
+                  type: string
+                  format: uri
+                price_atomic:
+                  type: string
+                  pattern: ^[1-9][0-9]{0,15}$
+                asset:
+                  type: string
+                network:
+                  type: string
+            recipes:
+              type: string
+              format: uri
+        protocols:
+          type: object
+          additionalProperties: true
+        operator_identity:
+          type: object
+          additionalProperties: true
+        payment:
+          $ref: '#/components/schemas/Price'
+        payment_mode:
+          type: string
+          enum:
+          - mock
+          - x402
+          - disabled
+        simulation_notice:
+          type:
+          - string
+          - 'null'
+        verification_keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/VerificationKey'
+        constraints:
+          type: object
+          additionalProperties: true
+        trust_boundaries:
+          type: object
+          additionalProperties:
+            type: string
+      additionalProperties: true
+    VerificationPrecheckIntent:
+      type: object
+      additionalProperties: false
+      required:
+      - request
+      - spend_policy
+      properties:
+        request:
+          $ref: '#/components/schemas/VerifyEvidenceRequest'
+        spend_policy:
+          $ref: '#/components/schemas/VerificationSpendPolicy'
+  securitySchemes:
+    agentRegistration:
+      type: http
+      scheme: bearer
+      bearerFormat: signed anonymous registration receipt
+      description: Optional 15-minute service-local receipt used only to inspect its own registration claim. It grants no API access and does not authorize payment.

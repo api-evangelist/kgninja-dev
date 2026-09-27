@@ -1,0 +1,1242 @@
+openapi: 3.2.0
+info:
+  title: Agent Verification Utility Purchase API
+  version: 0.4.3
+  description: A deterministic, x402-paid JSON evidence verification service for external agents. The service attests that declared checks were executed; it does not attest real-world truth.
+  license:
+    name: UNLICENSED
+servers:
+- url: /
+  description: Relative to the current deployment origin
+security: []
+tags:
+- name: Purchase
+  description: Quote and paid verification operations
+paths:
+  /auth.md:
+    get:
+      operationId: getAuthenticationGuide
+      summary: Get agent registration, anonymous-access, and x402 guidance
+      description: Explains optional anonymous registration, credential inspection, anonymous service access, per-request x402 authorization, and why OAuth metadata is not published.
+      tags:
+      - Purchase
+      responses:
+        '200':
+          description: Markdown access and payment-authorization guide
+          content:
+            text/markdown:
+              schema:
+                type: string
+  /a2a:
+    post:
+      operationId: sendA2aMessage
+      summary: Use the A2A 1.0 JSON-RPC interface
+      description: Implements A2A 1.0 SendMessage for idempotent quote preparation. The message must contain one application/json data part with idempotency_key and intent; intent includes the unchanged request and spend policy plus the digest returned by the free precheck. The returned agent message contains a bound quote and purchase instructions; it does not execute paid work. Because this adapter never creates A2A Tasks, ListTasks returns an empty collection while GetTask and CancelTask return TaskNotFoundError. Streaming, push notifications, and extended cards return their capability-specific A2A errors.
+      tags:
+      - Purchase
+      parameters:
+      - name: A2A-Version
+        in: header
+        required: true
+        schema:
+          type: string
+          const: '1.0'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: JSON-RPC result or error
+          headers:
+            A2A-Version:
+              required: true
+              schema:
+                type: string
+                const: '1.0'
+          content:
+            application/json:
+              schema:
+                type: object
+        '405':
+          description: Only POST is supported
+  /quote:
+    post:
+      operationId: quoteVerifyEvidence
+      summary: Validate a request and quote deterministic verification
+      description: Free quote preparation after a successful precheck. The request, spend policy, and precheck receipt digest are recomputed and matched before any D1 write. A quote is returned only when discovery still matches the precheck, the runtime price is within the agent's cap, and the conservative contribution-margin policy passes.
+      tags:
+      - Purchase
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaidVerificationIntent'
+      responses:
+        '200':
+          description: Profitable, executable quote
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /verify-evidence:
+    post:
+      operationId: verifyEvidence
+      summary: Purchase and execute deterministic evidence verification
+      description: POST the paid intent produced from a successful free precheck. Without X-Quote-ID, the service creates a quote bound to the precheck digest, request and evidence hashes, price cap, policy version, payment terms, and expiry before returning HTTP 402. With X-Quote-ID, the identical intent must match the bound quote. Empty or raw-request POSTs are refused before quote creation. A paid retry is accepted only when discovery survived into the paid call and the x402 payload contains the same binding digest.
+      tags:
+      - Purchase
+      parameters:
+      - $ref: '#/components/parameters/QuoteId'
+      - $ref: '#/components/parameters/PaymentSignature'
+      requestBody:
+        required: true
+        description: The unchanged request and spend policy plus precheck_receipt_digest returned by POST /validate-request.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaidVerificationIntent'
+      responses:
+        '200':
+          description: Verification executed and x402 payment settled
+          headers:
+            PAYMENT-RESPONSE:
+              required: true
+              description: Base64-encoded x402 v2 settlement response and enabled extensions.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyEvidenceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '402':
+          description: Valid request requires x402 payment
+          headers:
+            PAYMENT-REQUIRED:
+              required: true
+              description: Base64-encoded x402 v2 PaymentRequired document.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/X402PaymentRequired'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+components:
+  schemas:
+    DeliveredPaidVerificationBinding:
+      allOf:
+      - $ref: '#/components/schemas/PaidVerificationBinding'
+      - properties:
+          state:
+            const: delivered
+    Assertion:
+      oneOf:
+      - $ref: '#/components/schemas/Sha256EqualsAssertion'
+      - $ref: '#/components/schemas/JsonPointerExistsAssertion'
+      - $ref: '#/components/schemas/JsonPointerEqualsAssertion'
+      - $ref: '#/components/schemas/JsonTypeIsAssertion'
+      discriminator:
+        propertyName: op
+    PaidVerificationIntent:
+      type: object
+      additionalProperties: false
+      required:
+      - request
+      - spend_policy
+      - precheck_receipt_digest
+      properties:
+        request:
+          $ref: '#/components/schemas/VerifyEvidenceRequest'
+        spend_policy:
+          $ref: '#/components/schemas/VerificationSpendPolicy'
+        precheck_receipt_digest:
+          $ref: '#/components/schemas/Sha256Digest'
+    QuoteResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - quote_id
+      - request_id
+      - request_hash
+      - product
+      - price
+      - expires_at
+      - economic_guard
+      - purchase
+      - paid_verification_binding
+      properties:
+        quote_id:
+          type: string
+          pattern: ^qte_
+        request_id:
+          type: string
+          pattern: ^req_
+        request_hash:
+          $ref: '#/components/schemas/Sha256Digest'
+        product:
+          type: string
+          const: verify-evidence/det-json-v1
+        price:
+          $ref: '#/components/schemas/Price'
+        expires_at:
+          type: string
+          format: date-time
+        economic_guard:
+          type: object
+          additionalProperties: false
+          required:
+          - decision
+          - contribution_margin_lower_bound_microusd
+          properties:
+            decision:
+              type: string
+              const: accept
+            contribution_margin_lower_bound_microusd:
+              type: integer
+              minimum: 1
+        purchase:
+          type: object
+          additionalProperties: false
+          required:
+          - method
+          - url
+          - quote_header
+          properties:
+            method:
+              type: string
+              const: POST
+            url:
+              type: string
+              format: uri
+            quote_header:
+              type: string
+              const: X-Quote-ID
+        paid_verification_binding:
+          $ref: '#/components/schemas/QuotedPaidVerificationBinding'
+    PaymentRequiredPaidVerificationBinding:
+      allOf:
+      - $ref: '#/components/schemas/PaidVerificationBinding'
+      - properties:
+          state:
+            const: payment_required
+    InlineJsonEvidence:
+      type: object
+      additionalProperties: false
+      required:
+      - media_type
+      - content_base64
+      properties:
+        media_type:
+          type: string
+          const: application/json
+        content_base64:
+          type: string
+          contentEncoding: base64
+          contentMediaType: application/json
+          maxLength: 87384
+          description: Strict Base64. Decoded UTF-8 JSON must be between 1 byte and 65536 bytes.
+    JsonPointerEqualsAssertion:
+      type: object
+      additionalProperties: false
+      required:
+      - op
+      - path
+      - expected
+      properties:
+        op:
+          type: string
+          const: json_pointer_equals
+        path:
+          $ref: '#/components/schemas/JsonPointer'
+        expected:
+          description: Any JSON value. Equality is deterministic structural JSON equality.
+    Sha256Digest:
+      type: string
+      pattern: ^sha256:[a-f0-9]{64}$
+    DeliveryReceipt:
+      type: object
+      additionalProperties: false
+      required:
+      - receipt_id
+      - delivery
+      - price_paid_microusd
+      - variable_cost_upper_bound_microusd
+      - contribution_margin_lower_bound_microusd
+      - cost_basis
+      - paid_verification_binding
+      properties:
+        receipt_id:
+          type: string
+          pattern: ^rcpt_
+        delivery:
+          type: string
+          const: completed
+        price_paid_microusd:
+          type: integer
+          minimum: 1
+        variable_cost_upper_bound_microusd:
+          type: integer
+          minimum: 0
+        contribution_margin_lower_bound_microusd:
+          type: integer
+        cost_basis:
+          type: string
+          enum:
+          - conservative_upper_bound
+          - reconciled
+        paid_verification_binding:
+          $ref: '#/components/schemas/DeliveredPaidVerificationBinding'
+    QuotedPaidVerificationBinding:
+      allOf:
+      - $ref: '#/components/schemas/PaidVerificationBinding'
+      - properties:
+          state:
+            const: quoted
+    PaidVerificationBinding:
+      type: object
+      description: The immutable spend binding. quoted/payment_required have no paid receipt or refusal; refused has a refusal reason and no paid receipt; delivered has a paid receipt and no refusal reason, including when deterministic verification outcome is fail.
+      additionalProperties: false
+      required:
+      - schema_version
+      - binding_digest
+      - precheck_receipt_digest
+      - request_hash
+      - evidence_digest
+      - policy_version
+      - price_cap_atomic
+      - quoted_amount_atomic
+      - network
+      - asset
+      - pay_to
+      - quote_id
+      - expires_at
+      - discovery_survived
+      - state
+      - paid_receipt_id
+      - refusal_reason
+      properties:
+        schema_version:
+          type: string
+          const: agent-economy/paid-verification-binding/1.0
+        binding_digest:
+          $ref: '#/components/schemas/Sha256Digest'
+        precheck_receipt_digest:
+          $ref: '#/components/schemas/Sha256Digest'
+        request_hash:
+          $ref: '#/components/schemas/Sha256Digest'
+        evidence_digest:
+          $ref: '#/components/schemas/Sha256Digest'
+        policy_version:
+          type: string
+          const: agent-economy/precheck-policy/2.0
+        price_cap_atomic:
+          type: string
+          maxLength: 16
+          pattern: ^[1-9][0-9]*$
+        quoted_amount_atomic:
+          type: string
+          maxLength: 16
+          pattern: ^[1-9][0-9]*$
+        network:
+          type: string
+          enum:
+          - eip155:84532
+          - eip155:8453
+        asset:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+        pay_to:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+        quote_id:
+          type: string
+          pattern: ^qte_[A-Za-z0-9_-]+$
+        expires_at:
+          type: string
+          format: date-time
+        discovery_survived:
+          type: boolean
+          const: true
+        state:
+          type: string
+          enum:
+          - quoted
+          - payment_required
+          - delivered
+          - refused
+        paid_receipt_id:
+          oneOf:
+          - type: string
+            pattern: ^rcpt_[A-Za-z0-9_-]+$
+          - type: 'null'
+        refusal_reason:
+          oneOf:
+          - type: string
+            pattern: ^[A-Z0-9_]+$
+          - type: 'null'
+      oneOf:
+      - properties:
+          state:
+            enum:
+            - quoted
+            - payment_required
+          paid_receipt_id:
+            type: 'null'
+          refusal_reason:
+            type: 'null'
+      - properties:
+          state:
+            const: delivered
+          paid_receipt_id:
+            type: string
+            pattern: ^rcpt_[A-Za-z0-9_-]+$
+          refusal_reason:
+            type: 'null'
+      - properties:
+          state:
+            const: refused
+          paid_receipt_id:
+            type: 'null'
+          refusal_reason:
+            type: string
+            pattern: ^[A-Z0-9_]+$
+    Price:
+      type: object
+      additionalProperties: false
+      required:
+      - amount
+      - asset
+      - symbol
+      - decimals
+      - network
+      properties:
+        amount:
+          type: string
+          pattern: ^[0-9]+$
+          examples:
+          - '10000'
+        asset:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+        symbol:
+          type: string
+          const: USDC
+        decimals:
+          type: integer
+          const: 6
+        network:
+          type: string
+          enum:
+          - eip155:84532
+          - eip155:8453
+    VerifyEvidenceRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - client_request_id
+      - evidence
+      - assertions
+      properties:
+        client_request_id:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: ^[A-Za-z0-9._:-]+$
+        evidence:
+          $ref: '#/components/schemas/InlineJsonEvidence'
+        assertions:
+          type: array
+          minItems: 1
+          maxItems: 16
+          items:
+            $ref: '#/components/schemas/Assertion'
+    SignedEvidence:
+      type: object
+      additionalProperties: false
+      required:
+      - evidence_id
+      - signed_payload_b64url
+      - signature
+      properties:
+        evidence_id:
+          type: string
+          pattern: ^evd_
+        signed_payload_b64url:
+          type: string
+          pattern: ^[A-Za-z0-9_-]+$
+        signature:
+          type: object
+          additionalProperties: false
+          required:
+          - alg
+          - kid
+          - value_b64url
+          properties:
+            alg:
+              type: string
+              const: Ed25519
+            kid:
+              type: string
+              format: uri-reference
+            value_b64url:
+              type: string
+              pattern: ^[A-Za-z0-9_-]+$
+    SignedVerificationReceipt:
+      type: object
+      additionalProperties: false
+      required:
+      - payload
+      - signed_payload_b64url
+      - signature
+      properties:
+        payload:
+          $ref: '#/components/schemas/VerificationReceiptPayload'
+        signed_payload_b64url:
+          type: string
+          pattern: ^[A-Za-z0-9_-]+$
+        signature:
+          type: object
+          additionalProperties: false
+          required:
+          - alg
+          - kid
+          - value_b64url
+          properties:
+            alg:
+              type: string
+              const: Ed25519
+            kid:
+              type: string
+              format: uri-reference
+            value_b64url:
+              type: string
+              pattern: ^[A-Za-z0-9_-]+$
+    JsonPointer:
+      type: string
+      maxLength: 512
+      description: RFC 6901 JSON Pointer; the empty string addresses the whole document.
+    VerifyEvidenceResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - transaction_id
+      - quote_id
+      - request_hash
+      - verification
+      - evidence
+      - receipt
+      - fulfillment_proof
+      properties:
+        transaction_id:
+          type: string
+          pattern: ^txn_
+        quote_id:
+          type: string
+          pattern: ^qte_
+        request_hash:
+          $ref: '#/components/schemas/Sha256Digest'
+        verification:
+          $ref: '#/components/schemas/VerificationResult'
+        evidence:
+          $ref: '#/components/schemas/SignedEvidence'
+        receipt:
+          $ref: '#/components/schemas/DeliveryReceipt'
+        fulfillment_proof:
+          $ref: '#/components/schemas/FulfillmentProof'
+    RefusedPaidVerificationBinding:
+      allOf:
+      - $ref: '#/components/schemas/PaidVerificationBinding'
+      - properties:
+          state:
+            const: refused
+    VerificationResult:
+      type: object
+      additionalProperties: false
+      required:
+      - outcome
+      - algorithm_version
+      - checks
+      - executed_at
+      properties:
+        outcome:
+          type: string
+          enum:
+          - pass
+          - fail
+        algorithm_version:
+          type: string
+          const: det-json-v1
+        checks:
+          type: array
+          minItems: 1
+          maxItems: 16
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - index
+            - op
+            - passed
+            properties:
+              index:
+                type: integer
+                minimum: 0
+                maximum: 15
+              op:
+                type: string
+                enum:
+                - sha256_equals
+                - json_pointer_exists
+                - json_pointer_equals
+                - json_type_is
+              passed:
+                type: boolean
+              code:
+                type: string
+        executed_at:
+          type: string
+          format: date-time
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+          - code
+          - message
+          - request_id
+          - retryable
+          properties:
+            code:
+              type: string
+              pattern: ^[A-Z0-9_]+$
+            message:
+              type: string
+            request_id:
+              type: string
+            retryable:
+              type: boolean
+            details:
+              type: object
+              properties:
+                paid_verification_binding:
+                  $ref: '#/components/schemas/RefusedPaidVerificationBinding'
+              additionalProperties: true
+    Sha256EqualsAssertion:
+      type: object
+      additionalProperties: false
+      required:
+      - op
+      - expected_hex
+      properties:
+        op:
+          type: string
+          const: sha256_equals
+        expected_hex:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+    VerificationReceiptPayload:
+      type: object
+      additionalProperties: false
+      required:
+      - type
+      - schema_version
+      - receipt_id
+      - request
+      - verifier
+      - payment
+      - result
+      - recourse
+      - issued_at
+      properties:
+        type:
+          type: string
+          const: agent-verification-receipt/v1
+        schema_version:
+          type: integer
+          const: 1
+        receipt_id:
+          type: string
+          pattern: ^rcpt_[A-Za-z0-9_-]+$
+        request:
+          type: object
+          additionalProperties: false
+          required:
+          - task_type
+          - request_digest
+          - evidence_digest
+          - checks_requested
+          - checks_performed
+          - checks_unsupported
+          properties:
+            task_type:
+              type: string
+              const: verify_evidence
+            request_digest:
+              $ref: '#/components/schemas/Sha256Digest'
+            evidence_digest:
+              $ref: '#/components/schemas/Sha256Digest'
+            checks_requested:
+              type: array
+              minItems: 1
+              maxItems: 16
+              items:
+                type: string
+                enum:
+                - sha256_equals
+                - json_pointer_exists
+                - json_pointer_equals
+                - json_type_is
+            checks_performed:
+              type: array
+              minItems: 1
+              maxItems: 16
+              items:
+                type: string
+                enum:
+                - sha256_equals
+                - json_pointer_exists
+                - json_pointer_equals
+                - json_type_is
+            checks_unsupported:
+              type: array
+              maxItems: 16
+              items:
+                type: string
+                maxLength: 64
+        verifier:
+          type: object
+          additionalProperties: false
+          required:
+          - service_id
+          - service_version
+          - generation_id
+          - algorithm_version
+          - policy_version
+          properties:
+            service_id:
+              type: string
+              const: dev.kgninja.agent-economy/agent-verification-utility
+            service_version:
+              type: string
+            generation_id:
+              type: string
+              pattern: ^agent-economy/offer-generation/
+            algorithm_version:
+              type: string
+              const: det-json-v1
+            policy_version:
+              type: string
+              const: agent-economy/precheck-policy/2.0
+        payment:
+          type: object
+          additionalProperties: false
+          required:
+          - payment_protocol
+          - quote_id
+          - network
+          - asset
+          - amount_base_unit
+          - verification_status
+          - settlement_status
+          - settlement_evidence_type
+          - transaction_hash
+          properties:
+            payment_protocol:
+              type: string
+              enum:
+              - x402-v2-exact
+              - mock-payment-v1
+            quote_id:
+              type: string
+              pattern: ^qte_
+            network:
+              type: string
+              enum:
+              - eip155:84532
+              - eip155:8453
+            asset:
+              type: string
+              pattern: ^0x[a-fA-F0-9]{40}$
+            amount_base_unit:
+              type: string
+              pattern: ^[1-9][0-9]{0,15}$
+            verification_status:
+              type: string
+              const: verified
+            settlement_status:
+              type: string
+              const: confirmed
+            settlement_evidence_type:
+              type: string
+              enum:
+              - facilitator_response_with_transaction_hash
+              - mock_simulation_with_synthetic_transaction_hash
+            transaction_hash:
+              type: string
+              pattern: ^0x[a-fA-F0-9]{64}$
+        result:
+          type: object
+          additionalProperties: false
+          required:
+          - decision
+          - result_digest
+          - evidence_id
+          properties:
+            decision:
+              type: string
+              enum:
+              - pass
+              - fail
+            result_digest:
+              $ref: '#/components/schemas/Sha256Digest'
+            evidence_id:
+              type: string
+              pattern: ^evd_
+        recourse:
+          type: object
+          additionalProperties: false
+          required:
+          - receipt_retrieval
+          - evidence_retrieval
+          - policy_reference
+          - re_evaluation_supported
+          - re_evaluation_endpoint
+          - re_evaluation_requires_new_payment
+          - supersession_supported
+          properties:
+            receipt_retrieval:
+              type: 'null'
+            evidence_retrieval:
+              type: 'null'
+            policy_reference:
+              type: string
+              format: uri
+            re_evaluation_supported:
+              type: boolean
+              const: true
+            re_evaluation_endpoint:
+              type: string
+              format: uri
+            re_evaluation_requires_new_payment:
+              type: boolean
+              const: true
+            supersession_supported:
+              type: boolean
+              const: false
+        issued_at:
+          type: string
+          format: date-time
+    VerificationSpendPolicy:
+      type: object
+      additionalProperties: false
+      required:
+      - policy_version
+      - max_amount_atomic
+      - network
+      - asset
+      - pay_to
+      properties:
+        policy_version:
+          type: string
+          const: agent-economy/precheck-policy/2.0
+        max_amount_atomic:
+          type: string
+          maxLength: 16
+          pattern: ^[1-9][0-9]*$
+          description: Client-authorized maximum price in atomic USDC units. It must fit in the JavaScript safe-integer range.
+        network:
+          type: string
+          enum:
+          - eip155:84532
+          - eip155:8453
+        asset:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+        pay_to:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+    X402PaymentRequirement:
+      type: object
+      required:
+      - scheme
+      - network
+      - amount
+      - asset
+      - payTo
+      - maxTimeoutSeconds
+      properties:
+        scheme:
+          type: string
+          const: exact
+        network:
+          type: string
+          enum:
+          - eip155:84532
+          - eip155:8453
+        amount:
+          type: string
+          const: '10000'
+        asset:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+        payTo:
+          type: string
+          pattern: ^0x[a-fA-F0-9]{40}$
+        maxTimeoutSeconds:
+          type: integer
+          minimum: 1
+        extra:
+          type: object
+          additionalProperties: true
+      additionalProperties: false
+    JsonTypeIsAssertion:
+      type: object
+      additionalProperties: false
+      required:
+      - op
+      - path
+      - expected_type
+      properties:
+        op:
+          type: string
+          const: json_type_is
+        path:
+          $ref: '#/components/schemas/JsonPointer'
+        expected_type:
+          type: string
+          enum:
+          - 'null'
+          - boolean
+          - number
+          - string
+          - array
+          - object
+    JsonPointerExistsAssertion:
+      type: object
+      additionalProperties: false
+      required:
+      - op
+      - path
+      properties:
+        op:
+          type: string
+          const: json_pointer_exists
+        path:
+          $ref: '#/components/schemas/JsonPointer'
+    FulfillmentProof:
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - service
+      - transaction
+      - payment
+      - fulfillment
+      - signature
+      - verification_receipt
+      properties:
+        schema_version:
+          type: string
+          const: agent-economy/fulfillment-proof/1.0
+        service:
+          type: object
+          additionalProperties: false
+          required:
+          - id
+          - version
+          - generation_id
+          properties:
+            id:
+              type: string
+              const: dev.kgninja.agent-economy/agent-verification-utility
+            version:
+              type: string
+            generation_id:
+              type: string
+              pattern: ^agent-economy/offer-generation/
+        transaction:
+          type: object
+          additionalProperties: false
+          required:
+          - transaction_ref
+          - request_digest
+          - quote_id
+          properties:
+            transaction_ref:
+              type: string
+              pattern: ^txn_
+            request_digest:
+              $ref: '#/components/schemas/Sha256Digest'
+            quote_id:
+              type: string
+              pattern: ^qte_
+        payment:
+          type: object
+          additionalProperties: false
+          required:
+          - payment_protocol
+          - network
+          - asset
+          - amount_base_unit
+          - verification_status
+          - settlement_status
+          - settlement_evidence_type
+          - transaction_hash
+          properties:
+            payment_protocol:
+              type: string
+              enum:
+              - x402-v2-exact
+              - mock-payment-v1
+            network:
+              type: string
+              enum:
+              - eip155:84532
+              - eip155:8453
+            asset:
+              type: string
+              pattern: ^0x[a-fA-F0-9]{40}$
+            amount_base_unit:
+              type: string
+              pattern: ^[1-9][0-9]*$
+            verification_status:
+              type: string
+              const: verified
+            settlement_status:
+              type: string
+              const: confirmed
+            settlement_evidence_type:
+              type: string
+              enum:
+              - facilitator_response_with_transaction_hash
+              - mock_simulation_with_synthetic_transaction_hash
+            transaction_hash:
+              type: string
+              minLength: 1
+              maxLength: 256
+        fulfillment:
+          type: object
+          additionalProperties: false
+          required:
+          - result_schema_id
+          - result_digest
+          - receipt_id
+          - evidence_id
+          - issued_at
+          properties:
+            result_schema_id:
+              type: string
+              const: agent-economy/verify-evidence-response/1.0
+            result_digest:
+              $ref: '#/components/schemas/Sha256Digest'
+            receipt_id:
+              type: string
+              pattern: ^rcpt_
+            evidence_id:
+              type: string
+              pattern: ^evd_
+            issued_at:
+              type: string
+              format: date-time
+        signature:
+          type: object
+          additionalProperties: false
+          required:
+          - algorithm
+          - key_id
+          - value
+          - coverage
+          - signed_payload_b64url
+          - not_covered
+          properties:
+            algorithm:
+              type: string
+              const: Ed25519
+            key_id:
+              type: string
+              format: uri-reference
+            value:
+              type: string
+              pattern: ^[A-Za-z0-9_-]+$
+            coverage:
+              type: string
+              const: existing_signed_evidence_payload
+            signed_payload_b64url:
+              type: string
+              pattern: ^[A-Za-z0-9_-]+$
+            not_covered:
+              type: array
+              prefixItems:
+              - const: service
+              - const: quote_id
+              - const: payment
+              - const: result_digest
+              - const: receipt_id
+              minItems: 5
+              maxItems: 5
+        verification_receipt:
+          $ref: '#/components/schemas/SignedVerificationReceipt'
+    X402PaymentRequired:
+      type: object
+      description: Wire schema is generated by the pinned x402 v2 SDK. Unknown extension keys must be preserved.
+      required:
+      - x402Version
+      - error
+      - resource
+      - accepts
+      - extensions
+      - paid_verification_binding
+      properties:
+        x402Version:
+          type: integer
+          const: 2
+        error:
+          type: string
+        resource:
+          type: object
+          required:
+          - url
+          - description
+          - mimeType
+          - serviceName
+          - tags
+          - iconUrl
+          properties:
+            url:
+              type: string
+              format: uri
+            description:
+              type: string
+            mimeType:
+              type: string
+              const: application/json
+            serviceName:
+              type: string
+              const: Agent Verification Utility
+            tags:
+              type: array
+              items:
+                type: string
+            iconUrl:
+              type: string
+              format: uri
+          additionalProperties: false
+        accepts:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/X402PaymentRequirement'
+        extensions:
+          type: object
+          additionalProperties: true
+        paid_verification_binding:
+          $ref: '#/components/schemas/PaymentRequiredPaidVerificationBinding'
+      additionalProperties: false
+  responses:
+    Unavailable:
+      description: Kill switch, maintenance, budget exhaustion, facilitator outage, or unavailable cost basis
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BadRequest:
+      description: Malformed request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    PayloadTooLarge:
+      description: Evidence or request body exceeds v1 limits
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Idempotency, quote, payment identifier, or profitability conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unprocessable:
+      description: Syntactically valid but unsupported or non-executable verification request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Stable key for one logical quote request. Reusing it with a different request hash returns 409.
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 128
+        pattern: ^[A-Za-z0-9_-]+$
+    PaymentSignature:
+      name: PAYMENT-SIGNATURE
+      in: header
+      required: false
+      description: Base64-encoded x402 v2 payment payload, supplied on the paid retry.
+      schema:
+        type: string
+    QuoteId:
+      name: X-Quote-ID
+      in: header
+      required: false
+      description: Quote bound to the paid intent by /quote. Omit only when submitting a complete paid intent for direct quote creation; a paid retry identifies the generated bound quote from the signed payment payload.
+      schema:
+        type: string
+        pattern: ^qte_[A-Za-z0-9_-]+$
+  securitySchemes:
+    agentRegistration:
+      type: http
+      scheme: bearer
+      bearerFormat: signed anonymous registration receipt
+      description: Optional 15-minute service-local receipt used only to inspect its own registration claim. It grants no API access and does not authorize payment.
