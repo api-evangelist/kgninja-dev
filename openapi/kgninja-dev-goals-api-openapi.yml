@@ -59,6 +59,77 @@ components:
     Sha256Digest:
       type: string
       pattern: ^sha256:[a-f0-9]{64}$
+    RevenueGoalStatus:
+      type: object
+      required:
+      - schema_version
+      - status
+      - generated_at
+      properties:
+        schema_version:
+          type: string
+          const: agent-economy/revenue-goal/1.0
+        status:
+          type: string
+          enum:
+          - not_configured
+          - active
+          - paused
+          - completed
+          - expired
+        goal:
+          type: object
+          additionalProperties: true
+        measurement:
+          type: object
+          additionalProperties: true
+        progress:
+          type: object
+          additionalProperties: true
+        next_improvement:
+          type: object
+          additionalProperties: true
+        latest_evaluation:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+        message:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+      additionalProperties: true
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+          - code
+          - message
+          - request_id
+          - retryable
+          properties:
+            code:
+              type: string
+              pattern: ^[A-Z0-9_]+$
+            message:
+              type: string
+            request_id:
+              type: string
+            retryable:
+              type: boolean
+            details:
+              type: object
+              properties:
+                paid_verification_binding:
+                  $ref: '#/components/schemas/RefusedPaidVerificationBinding'
+              additionalProperties: true
     RefusedPaidVerificationBinding:
       allOf:
       - $ref: '#/components/schemas/PaidVerificationBinding'
@@ -173,77 +244,6 @@ components:
           refusal_reason:
             type: string
             pattern: ^[A-Z0-9_]+$
-    ErrorResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - error
-      properties:
-        error:
-          type: object
-          additionalProperties: false
-          required:
-          - code
-          - message
-          - request_id
-          - retryable
-          properties:
-            code:
-              type: string
-              pattern: ^[A-Z0-9_]+$
-            message:
-              type: string
-            request_id:
-              type: string
-            retryable:
-              type: boolean
-            details:
-              type: object
-              properties:
-                paid_verification_binding:
-                  $ref: '#/components/schemas/RefusedPaidVerificationBinding'
-              additionalProperties: true
-    RevenueGoalStatus:
-      type: object
-      required:
-      - schema_version
-      - status
-      - generated_at
-      properties:
-        schema_version:
-          type: string
-          const: agent-economy/revenue-goal/1.0
-        status:
-          type: string
-          enum:
-          - not_configured
-          - active
-          - paused
-          - completed
-          - expired
-        goal:
-          type: object
-          additionalProperties: true
-        measurement:
-          type: object
-          additionalProperties: true
-        progress:
-          type: object
-          additionalProperties: true
-        next_improvement:
-          type: object
-          additionalProperties: true
-        latest_evaluation:
-          type:
-          - object
-          - 'null'
-          additionalProperties: true
-        message:
-          type: string
-        generated_at:
-          type: string
-          format: date-time
-      additionalProperties: true
   securitySchemes:
     agentRegistration:
       type: http

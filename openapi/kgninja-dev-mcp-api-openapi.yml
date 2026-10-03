@@ -170,14 +170,14 @@ paths:
           $ref: '#/components/responses/Unavailable'
 components:
   responses:
-    BadRequest:
-      description: Malformed request
+    Unavailable:
+      description: Kill switch, maintenance, budget exhaustion, facilitator outage, or unavailable cost basis
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-    Unavailable:
-      description: Kill switch, maintenance, budget exhaustion, facilitator outage, or unavailable cost basis
+    BadRequest:
+      description: Malformed request
       content:
         application/json:
           schema:
@@ -219,6 +219,36 @@ components:
     Sha256Digest:
       type: string
       pattern: ^sha256:[a-f0-9]{64}$
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+          - code
+          - message
+          - request_id
+          - retryable
+          properties:
+            code:
+              type: string
+              pattern: ^[A-Z0-9_]+$
+            message:
+              type: string
+            request_id:
+              type: string
+            retryable:
+              type: boolean
+            details:
+              type: object
+              properties:
+                paid_verification_binding:
+                  $ref: '#/components/schemas/RefusedPaidVerificationBinding'
+              additionalProperties: true
     RefusedPaidVerificationBinding:
       allOf:
       - $ref: '#/components/schemas/PaidVerificationBinding'
@@ -333,36 +363,6 @@ components:
           refusal_reason:
             type: string
             pattern: ^[A-Z0-9_]+$
-    ErrorResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - error
-      properties:
-        error:
-          type: object
-          additionalProperties: false
-          required:
-          - code
-          - message
-          - request_id
-          - retryable
-          properties:
-            code:
-              type: string
-              pattern: ^[A-Z0-9_]+$
-            message:
-              type: string
-            request_id:
-              type: string
-            retryable:
-              type: boolean
-            details:
-              type: object
-              properties:
-                paid_verification_binding:
-                  $ref: '#/components/schemas/RefusedPaidVerificationBinding'
-              additionalProperties: true
   securitySchemes:
     agentRegistration:
       type: http

@@ -1,7 +1,7 @@
 {
   "provider": "kgninja-dev",
   "sources": [
-    "kgninja-dev-openapi.json"
+    "_original/kgninja-dev-openapi.json"
   ],
   "outputs": [
     "kgninja-dev-a2a-api-openapi.yml",
@@ -13,14 +13,22 @@
     "kgninja-dev-purchase-api-openapi.yml",
     "kgninja-dev-registration-api-openapi.yml"
   ],
-  "archived": [
-    "archived openapi/kgninja-dev-openapi.json"
-  ],
+  "archived": [],
   "errors": [],
   "warnings": [],
   "notes": [
+    "sourced from openapi/_original/ (1 archived document(s)); previously refined output at the top level was skipped rather than re-split",
     "kgninja-dev-openapi.json: upgraded openapi 3.1.0 -> OpenAPI 3.2.0",
-    "apis.yml register: written (+8 apis, 10 total)"
+    "apis.yml register: already-registered"
   ],
-  "skipped": []
+  "skipped": [
+    "kgninja-dev-a2a-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "kgninja-dev-decision-support-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "kgninja-dev-discovery-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "kgninja-dev-goals-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "kgninja-dev-mcp-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "kgninja-dev-operations-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "kgninja-dev-purchase-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "kgninja-dev-registration-api-openapi.yml: previously refined output, superseded by openapi/_original/"
+  ]
 }
