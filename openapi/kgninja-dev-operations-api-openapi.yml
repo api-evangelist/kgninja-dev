@@ -76,188 +76,7 @@ paths:
         '503':
           $ref: '#/components/responses/Unavailable'
 components:
-  responses:
-    Unavailable:
-      description: Kill switch, maintenance, budget exhaustion, facilitator outage, or unavailable cost basis
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    RateLimited:
-      description: Rate limit exceeded
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-            minimum: 1
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
   schemas:
-    Sha256Digest:
-      type: string
-      pattern: ^sha256:[a-f0-9]{64}$
-    PublicStats:
-      type: object
-      additionalProperties: false
-      required:
-      - schema_version
-      - service
-      - version
-      - availability
-      - payment
-      - operator_identity
-      - activity
-      - operations
-      - generated_at
-      properties:
-        schema_version:
-          type: string
-          const: agent-economy/public-stats/1.0
-        service:
-          type: string
-          const: agent-verification-utility
-        version:
-          type: string
-        availability:
-          type: string
-          enum:
-          - available
-          - degraded
-        payment:
-          type: object
-          additionalProperties: true
-        operator_identity:
-          type: object
-          additionalProperties: true
-        activity:
-          type: object
-          additionalProperties: true
-        operations:
-          type: object
-          additionalProperties: true
-        generated_at:
-          type: string
-          format: date-time
-    RevenueGoalStatus:
-      type: object
-      required:
-      - schema_version
-      - status
-      - generated_at
-      properties:
-        schema_version:
-          type: string
-          const: agent-economy/revenue-goal/1.0
-        status:
-          type: string
-          enum:
-          - not_configured
-          - active
-          - paused
-          - completed
-          - expired
-        goal:
-          type: object
-          additionalProperties: true
-        measurement:
-          type: object
-          additionalProperties: true
-        progress:
-          type: object
-          additionalProperties: true
-        next_improvement:
-          type: object
-          additionalProperties: true
-        latest_evaluation:
-          type:
-          - object
-          - 'null'
-          additionalProperties: true
-        message:
-          type: string
-        generated_at:
-          type: string
-          format: date-time
-      additionalProperties: true
-    ErrorResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - error
-      properties:
-        error:
-          type: object
-          additionalProperties: false
-          required:
-          - code
-          - message
-          - request_id
-          - retryable
-          properties:
-            code:
-              type: string
-              pattern: ^[A-Z0-9_]+$
-            message:
-              type: string
-            request_id:
-              type: string
-            retryable:
-              type: boolean
-            details:
-              type: object
-              properties:
-                paid_verification_binding:
-                  $ref: '#/components/schemas/RefusedPaidVerificationBinding'
-              additionalProperties: true
-    RefusedPaidVerificationBinding:
-      allOf:
-      - $ref: '#/components/schemas/PaidVerificationBinding'
-      - properties:
-          state:
-            const: refused
-    HealthResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - status
-      - service
-      - version
-      - checks
-      - time
-      properties:
-        status:
-          type: string
-          enum:
-          - ok
-          - degraded
-          - maintenance
-        service:
-          type: string
-          const: agent-verification-utility
-        version:
-          type: string
-        checks:
-          type: object
-          additionalProperties: false
-          required:
-          - deploy_enabled
-          - runtime_enabled
-          - payments_enabled
-          - cost_basis_fresh
-          properties:
-            deploy_enabled:
-              type: boolean
-            runtime_enabled:
-              type: boolean
-            payments_enabled:
-              type: boolean
-            cost_basis_fresh:
-              type: boolean
-        time:
-          type: string
-          format: date-time
     PaidVerificationBinding:
       type: object
       description: The immutable spend binding. quoted/payment_required have no paid receipt or refusal; refused has a refusal reason and no paid receipt; delivered has a paid receipt and no refusal reason, including when deterministic verification outcome is fail.
@@ -366,6 +185,187 @@ components:
           refusal_reason:
             type: string
             pattern: ^[A-Z0-9_]+$
+    Sha256Digest:
+      type: string
+      pattern: ^sha256:[a-f0-9]{64}$
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+          - code
+          - message
+          - request_id
+          - retryable
+          properties:
+            code:
+              type: string
+              pattern: ^[A-Z0-9_]+$
+            message:
+              type: string
+            request_id:
+              type: string
+            retryable:
+              type: boolean
+            details:
+              type: object
+              properties:
+                paid_verification_binding:
+                  $ref: '#/components/schemas/RefusedPaidVerificationBinding'
+              additionalProperties: true
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - status
+      - service
+      - version
+      - checks
+      - time
+      properties:
+        status:
+          type: string
+          enum:
+          - ok
+          - degraded
+          - maintenance
+        service:
+          type: string
+          const: agent-verification-utility
+        version:
+          type: string
+        checks:
+          type: object
+          additionalProperties: false
+          required:
+          - deploy_enabled
+          - runtime_enabled
+          - payments_enabled
+          - cost_basis_fresh
+          properties:
+            deploy_enabled:
+              type: boolean
+            runtime_enabled:
+              type: boolean
+            payments_enabled:
+              type: boolean
+            cost_basis_fresh:
+              type: boolean
+        time:
+          type: string
+          format: date-time
+    RefusedPaidVerificationBinding:
+      allOf:
+      - $ref: '#/components/schemas/PaidVerificationBinding'
+      - properties:
+          state:
+            const: refused
+    RevenueGoalStatus:
+      type: object
+      required:
+      - schema_version
+      - status
+      - generated_at
+      properties:
+        schema_version:
+          type: string
+          const: agent-economy/revenue-goal/1.0
+        status:
+          type: string
+          enum:
+          - not_configured
+          - active
+          - paused
+          - completed
+          - expired
+        goal:
+          type: object
+          additionalProperties: true
+        measurement:
+          type: object
+          additionalProperties: true
+        progress:
+          type: object
+          additionalProperties: true
+        next_improvement:
+          type: object
+          additionalProperties: true
+        latest_evaluation:
+          type:
+          - object
+          - 'null'
+          additionalProperties: true
+        message:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+      additionalProperties: true
+    PublicStats:
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - service
+      - version
+      - availability
+      - payment
+      - operator_identity
+      - activity
+      - operations
+      - generated_at
+      properties:
+        schema_version:
+          type: string
+          const: agent-economy/public-stats/1.0
+        service:
+          type: string
+          const: agent-verification-utility
+        version:
+          type: string
+        availability:
+          type: string
+          enum:
+          - available
+          - degraded
+        payment:
+          type: object
+          additionalProperties: true
+        operator_identity:
+          type: object
+          additionalProperties: true
+        activity:
+          type: object
+          additionalProperties: true
+        operations:
+          type: object
+          additionalProperties: true
+        generated_at:
+          type: string
+          format: date-time
+  responses:
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unavailable:
+      description: Kill switch, maintenance, budget exhaustion, facilitator outage, or unavailable cost basis
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   securitySchemes:
     agentRegistration:
       type: http
