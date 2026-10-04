@@ -115,6 +115,8 @@ apis:
   humanURL: https://agent-economy.kgninja.dev/
   baseURL: https://agent-economy.kgninja.dev/mcp
   tags:
+  - A2A
+  tags_raw:
   - a2a
   properties:
   - type: OpenAPI
@@ -137,6 +139,8 @@ apis:
   humanURL: https://agent-economy.kgninja.dev/
   baseURL: https://agent-economy.kgninja.dev/mcp
   tags:
+  - Decision Support
+  tags_raw:
   - decision-support
   properties:
   - type: OpenAPI
@@ -159,6 +163,8 @@ apis:
   humanURL: https://agent-economy.kgninja.dev/
   baseURL: https://agent-economy.kgninja.dev/mcp
   tags:
+  - Discovery
+  tags_raw:
   - discovery
   properties:
   - type: OpenAPI
@@ -181,6 +187,8 @@ apis:
   humanURL: https://agent-economy.kgninja.dev/
   baseURL: https://agent-economy.kgninja.dev/mcp
   tags:
+  - Goals
+  tags_raw:
   - goals
   properties:
   - type: OpenAPI
@@ -203,6 +211,8 @@ apis:
   humanURL: https://agent-economy.kgninja.dev/
   baseURL: https://agent-economy.kgninja.dev/mcp
   tags:
+  - MCP
+  tags_raw:
   - mcp
   properties:
   - type: OpenAPI
@@ -224,7 +234,8 @@ apis:
   description: Availability and operational status
   humanURL: https://agent-economy.kgninja.dev/
   baseURL: https://agent-economy.kgninja.dev/mcp
-  tags:
+  tags: []
+  tags_raw:
   - operations
   properties:
   - type: OpenAPI
@@ -247,6 +258,8 @@ apis:
   humanURL: https://agent-economy.kgninja.dev/
   baseURL: https://agent-economy.kgninja.dev/mcp
   tags:
+  - Purchase
+  tags_raw:
   - purchase
   properties:
   - type: OpenAPI
@@ -269,6 +282,8 @@ apis:
   humanURL: https://agent-economy.kgninja.dev/
   baseURL: https://agent-economy.kgninja.dev/mcp
   tags:
+  - Registration
+  tags_raw:
   - registration
   properties:
   - type: OpenAPI
