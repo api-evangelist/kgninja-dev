@@ -1,0 +1,12 @@
+{
+ "url": "https://agent-economy.kgninja.dev/openapi.json",
+ "requested_url": "https://agent-economy.kgninja.dev/openapi.json",
+ "status": 200,
+ "content_type": "application/json; charset=utf-8",
+ "bytes": 73437,
+ "sha256": "11a502220c83d2275f9174b4904f0bf5d812e1ca90b65a1ea6cf6f2730d7cf1e",
+ "fetched_at": "2026-10-04",
+ "fetched_by": "APIEvangelist-Harvest/1.0 (+https://apievangelist.com)",
+ "match": "byte-identical",
+ "note": "Re-fetched from the provider by verify-openapi-sources.py; the archived file is byte-identical to what the provider serves."
+}
