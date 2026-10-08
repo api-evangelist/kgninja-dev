@@ -48,3 +48,17 @@ free_tier:
   everything_but_execution: true
   registration_required: false
   note: 'auth.md: "Free discovery, documentation, health, aggregate statistics, revenue-goal status, quotes, MCP tools/list, and the four free MCP tools can be called without credentials."'
+x-canonical:
+  generated: '2026-10-08'
+  vocabulary: all/0-working/economics/plans-canonical.yml
+  models:
+  - subscription
+  units: []
+  plans:
+  - name: Deterministic evidence verification (verify_evidence)
+    access: other
+    model: subscription
+    model_how: derived
+    units: []
+    periods:
+    - other
