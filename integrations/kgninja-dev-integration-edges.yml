@@ -1,0 +1,38 @@
+edges:
+- partner_name: MCP Registry
+  partner: mcp
+  partner_match: register
+  type: register
+  channel: standard-directory
+  relationship: standard-participant
+  direction: partner-built
+  evidence: https://registry.modelcontextprotocol.io/v0/servers?search=dev.kgninja.agent-economy
+  contract_reference:
+    register: registry.modelcontextprotocol.io
+    spec_file: null
+    role: mcp-server-listing
+    registered_name: dev.kgninja.agent-economy/agent-verification-utility
+    register_id: dev.kgninja.agent-economy/agent-verification-utility
+    detected_by: sweep-agent-tools.py
+    detected: '2026-10-14'
+  mcp_registry:
+    servers:
+    - dev.kgninja.agent-economy/agent-verification-utility
+    - io.github.KG-NINJA/hyperxosist-agent
+    hosted_remote: 2
+    local_package: 0
+    transports:
+      streamable-http: 2
+    auth_declared: 0
+    catalog_declared: true
+    namespace_domains:
+    - kgninja.dev
+  matched_by:
+  - namespace-domain
+  - remote-domain
+  detected_by: sweep-agent-tools.py
+  first_seen: '2026-10-14'
+generated: '2026-10-14'
+method: searched
+checked:
+- https://registry.modelcontextprotocol.io/v0/servers
