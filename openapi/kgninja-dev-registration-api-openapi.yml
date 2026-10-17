@@ -202,6 +202,9 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
+    Sha256Digest:
+      type: string
+      pattern: ^sha256:[a-f0-9]{64}$
     PaidVerificationBinding:
       type: object
       description: The immutable spend binding. quoted/payment_required have no paid receipt or refusal; refused has a refusal reason and no paid receipt; delivered has a paid receipt and no refusal reason, including when deterministic verification outcome is fail.
@@ -310,9 +313,12 @@ components:
           refusal_reason:
             type: string
             pattern: ^[A-Z0-9_]+$
-    Sha256Digest:
-      type: string
-      pattern: ^sha256:[a-f0-9]{64}$
+    RefusedPaidVerificationBinding:
+      allOf:
+      - $ref: '#/components/schemas/PaidVerificationBinding'
+      - properties:
+          state:
+            const: refused
     ErrorResponse:
       type: object
       additionalProperties: false
@@ -343,19 +349,7 @@ components:
                 paid_verification_binding:
                   $ref: '#/components/schemas/RefusedPaidVerificationBinding'
               additionalProperties: true
-    RefusedPaidVerificationBinding:
-      allOf:
-      - $ref: '#/components/schemas/PaidVerificationBinding'
-      - properties:
-          state:
-            const: refused
   responses:
-    Unprocessable:
-      description: Syntactically valid but unsupported or non-executable verification request
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
     RateLimited:
       description: Rate limit exceeded
       headers:
@@ -375,6 +369,12 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
     PayloadTooLarge:
       description: Evidence or request body exceeds v1 limits
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unprocessable:
+      description: Syntactically valid but unsupported or non-executable verification request
       content:
         application/json:
           schema:

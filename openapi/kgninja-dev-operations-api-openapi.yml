@@ -188,83 +188,6 @@ components:
     Sha256Digest:
       type: string
       pattern: ^sha256:[a-f0-9]{64}$
-    ErrorResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - error
-      properties:
-        error:
-          type: object
-          additionalProperties: false
-          required:
-          - code
-          - message
-          - request_id
-          - retryable
-          properties:
-            code:
-              type: string
-              pattern: ^[A-Z0-9_]+$
-            message:
-              type: string
-            request_id:
-              type: string
-            retryable:
-              type: boolean
-            details:
-              type: object
-              properties:
-                paid_verification_binding:
-                  $ref: '#/components/schemas/RefusedPaidVerificationBinding'
-              additionalProperties: true
-    HealthResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - status
-      - service
-      - version
-      - checks
-      - time
-      properties:
-        status:
-          type: string
-          enum:
-          - ok
-          - degraded
-          - maintenance
-        service:
-          type: string
-          const: agent-verification-utility
-        version:
-          type: string
-        checks:
-          type: object
-          additionalProperties: false
-          required:
-          - deploy_enabled
-          - runtime_enabled
-          - payments_enabled
-          - cost_basis_fresh
-          properties:
-            deploy_enabled:
-              type: boolean
-            runtime_enabled:
-              type: boolean
-            payments_enabled:
-              type: boolean
-            cost_basis_fresh:
-              type: boolean
-        time:
-          type: string
-          format: date-time
-    RefusedPaidVerificationBinding:
-      allOf:
-      - $ref: '#/components/schemas/PaidVerificationBinding'
-      - properties:
-          state:
-            const: refused
     RevenueGoalStatus:
       type: object
       required:
@@ -348,6 +271,83 @@ components:
         generated_at:
           type: string
           format: date-time
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - status
+      - service
+      - version
+      - checks
+      - time
+      properties:
+        status:
+          type: string
+          enum:
+          - ok
+          - degraded
+          - maintenance
+        service:
+          type: string
+          const: agent-verification-utility
+        version:
+          type: string
+        checks:
+          type: object
+          additionalProperties: false
+          required:
+          - deploy_enabled
+          - runtime_enabled
+          - payments_enabled
+          - cost_basis_fresh
+          properties:
+            deploy_enabled:
+              type: boolean
+            runtime_enabled:
+              type: boolean
+            payments_enabled:
+              type: boolean
+            cost_basis_fresh:
+              type: boolean
+        time:
+          type: string
+          format: date-time
+    RefusedPaidVerificationBinding:
+      allOf:
+      - $ref: '#/components/schemas/PaidVerificationBinding'
+      - properties:
+          state:
+            const: refused
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+          - code
+          - message
+          - request_id
+          - retryable
+          properties:
+            code:
+              type: string
+              pattern: ^[A-Z0-9_]+$
+            message:
+              type: string
+            request_id:
+              type: string
+            retryable:
+              type: boolean
+            details:
+              type: object
+              properties:
+                paid_verification_binding:
+                  $ref: '#/components/schemas/RefusedPaidVerificationBinding'
+              additionalProperties: true
   responses:
     RateLimited:
       description: Rate limit exceeded

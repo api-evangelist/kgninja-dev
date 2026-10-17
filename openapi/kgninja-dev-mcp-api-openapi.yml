@@ -169,52 +169,6 @@ paths:
         '503':
           $ref: '#/components/responses/Unavailable'
 components:
-  responses:
-    BadRequest:
-      description: Malformed request
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    RateLimited:
-      description: Rate limit exceeded
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-            minimum: 1
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    KnowledgeDocument:
-      description: Technical documentation with HTML and agent-optimized Markdown representations
-      headers:
-        Vary:
-          schema:
-            type: string
-            const: Accept
-        ETag:
-          schema:
-            type: string
-        X-Markdown-Tokens:
-          description: Approximate token count on the Markdown representation
-          schema:
-            type: integer
-            minimum: 1
-      content:
-        text/html:
-          schema:
-            type: string
-        text/markdown:
-          schema:
-            type: string
-    Unavailable:
-      description: Kill switch, maintenance, budget exhaustion, facilitator outage, or unavailable cost basis
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
   schemas:
     PaidVerificationBinding:
       type: object
@@ -327,6 +281,12 @@ components:
     Sha256Digest:
       type: string
       pattern: ^sha256:[a-f0-9]{64}$
+    RefusedPaidVerificationBinding:
+      allOf:
+      - $ref: '#/components/schemas/PaidVerificationBinding'
+      - properties:
+          state:
+            const: refused
     ErrorResponse:
       type: object
       additionalProperties: false
@@ -357,12 +317,52 @@ components:
                 paid_verification_binding:
                   $ref: '#/components/schemas/RefusedPaidVerificationBinding'
               additionalProperties: true
-    RefusedPaidVerificationBinding:
-      allOf:
-      - $ref: '#/components/schemas/PaidVerificationBinding'
-      - properties:
-          state:
-            const: refused
+  responses:
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unavailable:
+      description: Kill switch, maintenance, budget exhaustion, facilitator outage, or unavailable cost basis
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BadRequest:
+      description: Malformed request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    KnowledgeDocument:
+      description: Technical documentation with HTML and agent-optimized Markdown representations
+      headers:
+        Vary:
+          schema:
+            type: string
+            const: Accept
+        ETag:
+          schema:
+            type: string
+        X-Markdown-Tokens:
+          description: Approximate token count on the Markdown representation
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        text/html:
+          schema:
+            type: string
+        text/markdown:
+          schema:
+            type: string
   securitySchemes:
     agentRegistration:
       type: http

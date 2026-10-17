@@ -75,24 +75,54 @@ paths:
           $ref: '#/components/responses/Unavailable'
 components:
   schemas:
-    VerificationSpendPolicy:
+    Sha256Digest:
+      type: string
+      pattern: ^sha256:[a-f0-9]{64}$
+    PaidVerificationBinding:
       type: object
+      description: The immutable spend binding. quoted/payment_required have no paid receipt or refusal; refused has a refusal reason and no paid receipt; delivered has a paid receipt and no refusal reason, including when deterministic verification outcome is fail.
       additionalProperties: false
       required:
+      - schema_version
+      - binding_digest
+      - precheck_receipt_digest
+      - request_hash
+      - evidence_digest
       - policy_version
-      - max_amount_atomic
+      - price_cap_atomic
+      - quoted_amount_atomic
       - network
       - asset
       - pay_to
+      - quote_id
+      - expires_at
+      - discovery_survived
+      - state
+      - paid_receipt_id
+      - refusal_reason
       properties:
+        schema_version:
+          type: string
+          const: agent-economy/paid-verification-binding/1.0
+        binding_digest:
+          $ref: '#/components/schemas/Sha256Digest'
+        precheck_receipt_digest:
+          $ref: '#/components/schemas/Sha256Digest'
+        request_hash:
+          $ref: '#/components/schemas/Sha256Digest'
+        evidence_digest:
+          $ref: '#/components/schemas/Sha256Digest'
         policy_version:
           type: string
           const: agent-economy/precheck-policy/2.0
-        max_amount_atomic:
+        price_cap_atomic:
           type: string
           maxLength: 16
           pattern: ^[1-9][0-9]*$
-          description: Client-authorized maximum price in atomic USDC units. It must fit in the JavaScript safe-integer range.
+        quoted_amount_atomic:
+          type: string
+          maxLength: 16
+          pattern: ^[1-9][0-9]*$
         network:
           type: string
           enum:
@@ -104,6 +134,297 @@ components:
         pay_to:
           type: string
           pattern: ^0x[a-fA-F0-9]{40}$
+        quote_id:
+          type: string
+          pattern: ^qte_[A-Za-z0-9_-]+$
+        expires_at:
+          type: string
+          format: date-time
+        discovery_survived:
+          type: boolean
+          const: true
+        state:
+          type: string
+          enum:
+          - quoted
+          - payment_required
+          - delivered
+          - refused
+        paid_receipt_id:
+          oneOf:
+          - type: string
+            pattern: ^rcpt_[A-Za-z0-9_-]+$
+          - type: 'null'
+        refusal_reason:
+          oneOf:
+          - type: string
+            pattern: ^[A-Z0-9_]+$
+          - type: 'null'
+      oneOf:
+      - properties:
+          state:
+            enum:
+            - quoted
+            - payment_required
+          paid_receipt_id:
+            type: 'null'
+          refusal_reason:
+            type: 'null'
+      - properties:
+          state:
+            const: delivered
+          paid_receipt_id:
+            type: string
+            pattern: ^rcpt_[A-Za-z0-9_-]+$
+          refusal_reason:
+            type: 'null'
+      - properties:
+          state:
+            const: refused
+          paid_receipt_id:
+            type: 'null'
+          refusal_reason:
+            type: string
+            pattern: ^[A-Z0-9_]+$
+    VerificationRecipes:
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - service
+      - version
+      - stable_document_marker
+      - recipes
+      - important_notice
+      properties:
+        schema_version:
+          type: string
+          const: agent-economy/verification-recipes/1.0
+        service:
+          type: string
+          const: agent-verification-utility
+        version:
+          type: string
+        stable_document_marker:
+          type: string
+        important_notice:
+          type: string
+        recipes:
+          type: array
+          minItems: 3
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - id
+            - title
+            - description
+            - use_when
+            - do_not_use_when
+            - risk_reduced
+            - limitations
+            - free_precheck
+            - paid_execution
+            - price
+            - network
+            - supported_assertions
+            - request_example
+            - precheck_intent_example
+            - expected_output_summary
+            - mcp_tool
+            - http_endpoint
+            - jwks_url
+            - agent_skill_url
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              description:
+                type: string
+              use_when:
+                type: array
+                minItems: 1
+                items:
+                  type: string
+              do_not_use_when:
+                type: array
+                minItems: 1
+                items:
+                  type: string
+              risk_reduced:
+                type: string
+              limitations:
+                type: array
+                minItems: 1
+                items:
+                  type: string
+              free_precheck:
+                type: object
+                additionalProperties: true
+              paid_execution:
+                type: object
+                additionalProperties: true
+              price:
+                type: object
+                additionalProperties: true
+              network:
+                type: string
+                enum:
+                - eip155:84532
+                - eip155:8453
+              supported_assertions:
+                type: array
+                items:
+                  type: string
+                  enum:
+                  - sha256_equals
+                  - json_pointer_exists
+                  - json_pointer_equals
+                  - json_type_is
+              request_example:
+                $ref: '#/components/schemas/VerifyEvidenceRequest'
+              precheck_intent_example:
+                $ref: '#/components/schemas/VerificationPrecheckIntent'
+              expected_output_summary:
+                type: string
+              mcp_tool:
+                type: string
+                const: verify_evidence
+              http_endpoint:
+                type: string
+                format: uri
+              jwks_url:
+                type: string
+                format: uri
+              agent_skill_url:
+                type: string
+                format: uri
+    JsonPointerEqualsAssertion:
+      type: object
+      additionalProperties: false
+      required:
+      - op
+      - path
+      - expected
+      properties:
+        op:
+          type: string
+          const: json_pointer_equals
+        path:
+          $ref: '#/components/schemas/JsonPointer'
+        expected:
+          description: Any JSON value. Equality is deterministic structural JSON equality.
+    MachineQuote:
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - precheck_status
+      - quote_id
+      - quote_expires_at
+      - request_digest
+      - offer_generation_id
+      - exact_price
+      - supported_checks
+      - unsupported_checks
+      - expected_fulfillment
+      - paid_tool
+      - quote_scope
+      - client_echo_required
+      properties:
+        schema_version:
+          type: integer
+          const: 1
+        precheck_status:
+          type: string
+          enum:
+          - eligible
+          - ineligible
+          - unsupported
+        quote_id:
+          type:
+          - string
+          - 'null'
+          pattern: ^pqt_[a-f0-9]{32}$
+        quote_expires_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        request_digest:
+          oneOf:
+          - $ref: '#/components/schemas/Sha256Digest'
+          - type: 'null'
+        offer_generation_id:
+          type: string
+          pattern: ^agent-economy/offer-generation/
+        exact_price:
+          type: object
+          additionalProperties: false
+          required:
+          - amount_base_unit
+          - display_amount
+          - asset
+          - pay_to
+          - network
+          - payment_protocol
+          properties:
+            amount_base_unit:
+              type: string
+              pattern: ^[1-9][0-9]*$
+            display_amount:
+              type: string
+            asset:
+              type: string
+              pattern: ^0x[a-fA-F0-9]{40}$
+            pay_to:
+              type: string
+              pattern: ^0x[a-fA-F0-9]{40}$
+            network:
+              type: string
+              enum:
+              - eip155:84532
+              - eip155:8453
+            payment_protocol:
+              type: string
+              const: x402-v2-exact
+        supported_checks:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+        unsupported_checks:
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+        expected_fulfillment:
+          type: object
+          additionalProperties: false
+          required:
+          - result_schema_id
+          - signed_evidence
+          - receipt
+          properties:
+            result_schema_id:
+              type: string
+              const: agent-economy/verify-evidence-response/1.0
+            signed_evidence:
+              type: boolean
+              const: true
+            receipt:
+              type: boolean
+              const: true
+        paid_tool:
+          type: string
+          const: verify_evidence
+        quote_scope:
+          type: string
+          const: precheck_preview
+        client_echo_required:
+          type: boolean
+          const: false
     PrecheckReceipt:
       type: object
       additionalProperties: false
@@ -504,496 +825,24 @@ components:
               const: false
         receipt_digest:
           $ref: '#/components/schemas/Sha256Digest'
-    RefusedPaidVerificationBinding:
-      allOf:
-      - $ref: '#/components/schemas/PaidVerificationBinding'
-      - properties:
-          state:
-            const: refused
-    FreeRequestValidationFailure:
+    VerificationSpendPolicy:
       type: object
       additionalProperties: false
       required:
-      - schema_version
-      - valid
-      - verification_executed
-      - payment_required
-      - supported
-      - reason_code
-      - message
-      - request_id
-      - canonical_offer
-      - machine_quote
-      - precheck_receipt
-      - next_step
-      properties:
-        schema_version:
-          type: string
-          const: agent-economy/request-validation/3.0
-        valid:
-          type: boolean
-          const: false
-        verification_executed:
-          type: boolean
-          const: false
-        payment_required:
-          type: boolean
-          const: false
-        supported:
-          type: boolean
-          const: false
-        reason_code:
-          type: string
-          pattern: ^[A-Z0-9_]+$
-        message:
-          type: string
-        request_id:
-          type: string
-        canonical_offer:
-          $ref: '#/components/schemas/CanonicalOffer'
-        machine_quote:
-          $ref: '#/components/schemas/MachineQuote'
-        precheck_receipt:
-          $ref: '#/components/schemas/PrecheckReceipt'
-        next_step:
-          type: string
-    InlineJsonEvidence:
-      type: object
-      additionalProperties: false
-      required:
-      - media_type
-      - content_base64
-      properties:
-        media_type:
-          type: string
-          const: application/json
-        content_base64:
-          type: string
-          contentEncoding: base64
-          contentMediaType: application/json
-          maxLength: 87384
-          description: Strict Base64. Decoded UTF-8 JSON must be between 1 byte and 65536 bytes.
-    Assertion:
-      oneOf:
-      - $ref: '#/components/schemas/Sha256EqualsAssertion'
-      - $ref: '#/components/schemas/JsonPointerExistsAssertion'
-      - $ref: '#/components/schemas/JsonPointerEqualsAssertion'
-      - $ref: '#/components/schemas/JsonTypeIsAssertion'
-      discriminator:
-        propertyName: op
-    Sha256EqualsAssertion:
-      type: object
-      additionalProperties: false
-      required:
-      - op
-      - expected_hex
-      properties:
-        op:
-          type: string
-          const: sha256_equals
-        expected_hex:
-          type: string
-          pattern: ^[a-f0-9]{64}$
-    ErrorResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - error
-      properties:
-        error:
-          type: object
-          additionalProperties: false
-          required:
-          - code
-          - message
-          - request_id
-          - retryable
-          properties:
-            code:
-              type: string
-              pattern: ^[A-Z0-9_]+$
-            message:
-              type: string
-            request_id:
-              type: string
-            retryable:
-              type: boolean
-            details:
-              type: object
-              properties:
-                paid_verification_binding:
-                  $ref: '#/components/schemas/RefusedPaidVerificationBinding'
-              additionalProperties: true
-    JsonPointerEqualsAssertion:
-      type: object
-      additionalProperties: false
-      required:
-      - op
-      - path
-      - expected
-      properties:
-        op:
-          type: string
-          const: json_pointer_equals
-        path:
-          $ref: '#/components/schemas/JsonPointer'
-        expected:
-          description: Any JSON value. Equality is deterministic structural JSON equality.
-    CanonicalSchemaReference:
-      type: object
-      additionalProperties: false
-      required:
-      - schema_id
-      - schema_digest
-      properties:
-        schema_id:
-          type: string
-        schema_digest:
-          $ref: '#/components/schemas/Sha256Digest'
-    VerificationRecipes:
-      type: object
-      additionalProperties: false
-      required:
-      - schema_version
-      - service
-      - version
-      - stable_document_marker
-      - recipes
-      - important_notice
-      properties:
-        schema_version:
-          type: string
-          const: agent-economy/verification-recipes/1.0
-        service:
-          type: string
-          const: agent-verification-utility
-        version:
-          type: string
-        stable_document_marker:
-          type: string
-        important_notice:
-          type: string
-        recipes:
-          type: array
-          minItems: 3
-          items:
-            type: object
-            additionalProperties: false
-            required:
-            - id
-            - title
-            - description
-            - use_when
-            - do_not_use_when
-            - risk_reduced
-            - limitations
-            - free_precheck
-            - paid_execution
-            - price
-            - network
-            - supported_assertions
-            - request_example
-            - precheck_intent_example
-            - expected_output_summary
-            - mcp_tool
-            - http_endpoint
-            - jwks_url
-            - agent_skill_url
-            properties:
-              id:
-                type: string
-              title:
-                type: string
-              description:
-                type: string
-              use_when:
-                type: array
-                minItems: 1
-                items:
-                  type: string
-              do_not_use_when:
-                type: array
-                minItems: 1
-                items:
-                  type: string
-              risk_reduced:
-                type: string
-              limitations:
-                type: array
-                minItems: 1
-                items:
-                  type: string
-              free_precheck:
-                type: object
-                additionalProperties: true
-              paid_execution:
-                type: object
-                additionalProperties: true
-              price:
-                type: object
-                additionalProperties: true
-              network:
-                type: string
-                enum:
-                - eip155:84532
-                - eip155:8453
-              supported_assertions:
-                type: array
-                items:
-                  type: string
-                  enum:
-                  - sha256_equals
-                  - json_pointer_exists
-                  - json_pointer_equals
-                  - json_type_is
-              request_example:
-                $ref: '#/components/schemas/VerifyEvidenceRequest'
-              precheck_intent_example:
-                $ref: '#/components/schemas/VerificationPrecheckIntent'
-              expected_output_summary:
-                type: string
-              mcp_tool:
-                type: string
-                const: verify_evidence
-              http_endpoint:
-                type: string
-                format: uri
-              jwks_url:
-                type: string
-                format: uri
-              agent_skill_url:
-                type: string
-                format: uri
-    JsonTypeIsAssertion:
-      type: object
-      additionalProperties: false
-      required:
-      - op
-      - path
-      - expected_type
-      properties:
-        op:
-          type: string
-          const: json_type_is
-        path:
-          $ref: '#/components/schemas/JsonPointer'
-        expected_type:
-          type: string
-          enum:
-          - 'null'
-          - boolean
-          - number
-          - string
-          - array
-          - object
-    VerifyEvidenceRequest:
-      type: object
-      additionalProperties: false
-      required:
-      - client_request_id
-      - evidence
-      - assertions
-      properties:
-        client_request_id:
-          type: string
-          minLength: 1
-          maxLength: 64
-          pattern: ^[A-Za-z0-9._:-]+$
-        evidence:
-          $ref: '#/components/schemas/InlineJsonEvidence'
-        assertions:
-          type: array
-          minItems: 1
-          maxItems: 16
-          items:
-            $ref: '#/components/schemas/Assertion'
-    JsonPointer:
-      type: string
-      maxLength: 512
-      description: RFC 6901 JSON Pointer; the empty string addresses the whole document.
-    CanonicalOffer:
-      type: object
-      additionalProperties: false
-      required:
-      - schema_version
-      - service_id
-      - service_version
-      - generation_id
-      - tool
-      - input
-      - output
-      - pricing
-      - free_precheck
-      - facts_only
-      properties:
-        schema_version:
-          type: integer
-          const: 1
-        service_id:
-          type: string
-          const: dev.kgninja.agent-economy/agent-verification-utility
-        service_version:
-          type: string
-        generation_id:
-          type: string
-          pattern: ^agent-economy/offer-generation/
-        tool:
-          type: object
-          additionalProperties: false
-          required:
-          - name
-          - summary
-          - use_when
-          - do_not_use_when
-          properties:
-            name:
-              type: string
-              const: verify_evidence
-            summary:
-              type: string
-            use_when:
-              type: array
-              items:
-                type: string
-            do_not_use_when:
-              type: array
-              items:
-                type: string
-        input:
-          $ref: '#/components/schemas/CanonicalSchemaReference'
-        output:
-          type: object
-          additionalProperties: false
-          required:
-          - schema_id
-          - schema_digest
-          - deterministic
-          - signed_evidence
-          - receipt
-          properties:
-            schema_id:
-              type: string
-            schema_digest:
-              $ref: '#/components/schemas/Sha256Digest'
-            deterministic:
-              type: boolean
-              const: true
-            signed_evidence:
-              type: boolean
-              const: true
-            receipt:
-              type: boolean
-              const: true
-        pricing:
-          type: object
-          additionalProperties: false
-          required:
-          - payment_protocol
-          - network
-          - asset
-          - pay_to
-          - amount_base_unit
-          - display_amount
-          properties:
-            payment_protocol:
-              type: string
-              const: x402-v2-exact
-            network:
-              type: string
-              enum:
-              - eip155:84532
-              - eip155:8453
-            asset:
-              type: string
-              pattern: ^0x[a-fA-F0-9]{40}$
-            pay_to:
-              type: string
-              pattern: ^0x[a-fA-F0-9]{40}$
-            amount_base_unit:
-              type: string
-              pattern: ^[1-9][0-9]*$
-            display_amount:
-              type: string
-        free_precheck:
-          type: object
-          additionalProperties: false
-          required:
-          - available
-          properties:
-            available:
-              type: boolean
-              const: true
-        facts_only:
-          type: boolean
-          const: true
-    VerificationPrecheckIntent:
-      type: object
-      additionalProperties: false
-      required:
-      - request
-      - spend_policy
-      properties:
-        request:
-          $ref: '#/components/schemas/VerifyEvidenceRequest'
-        spend_policy:
-          $ref: '#/components/schemas/VerificationSpendPolicy'
-    JsonPointerExistsAssertion:
-      type: object
-      additionalProperties: false
-      required:
-      - op
-      - path
-      properties:
-        op:
-          type: string
-          const: json_pointer_exists
-        path:
-          $ref: '#/components/schemas/JsonPointer'
-    PaidVerificationBinding:
-      type: object
-      description: The immutable spend binding. quoted/payment_required have no paid receipt or refusal; refused has a refusal reason and no paid receipt; delivered has a paid receipt and no refusal reason, including when deterministic verification outcome is fail.
-      additionalProperties: false
-      required:
-      - schema_version
-      - binding_digest
-      - precheck_receipt_digest
-      - request_hash
-      - evidence_digest
       - policy_version
-      - price_cap_atomic
-      - quoted_amount_atomic
+      - max_amount_atomic
       - network
       - asset
       - pay_to
-      - quote_id
-      - expires_at
-      - discovery_survived
-      - state
-      - paid_receipt_id
-      - refusal_reason
       properties:
-        schema_version:
-          type: string
-          const: agent-economy/paid-verification-binding/1.0
-        binding_digest:
-          $ref: '#/components/schemas/Sha256Digest'
-        precheck_receipt_digest:
-          $ref: '#/components/schemas/Sha256Digest'
-        request_hash:
-          $ref: '#/components/schemas/Sha256Digest'
-        evidence_digest:
-          $ref: '#/components/schemas/Sha256Digest'
         policy_version:
           type: string
           const: agent-economy/precheck-policy/2.0
-        price_cap_atomic:
+        max_amount_atomic:
           type: string
           maxLength: 16
           pattern: ^[1-9][0-9]*$
-        quoted_amount_atomic:
-          type: string
-          maxLength: 16
-          pattern: ^[1-9][0-9]*$
+          description: Client-authorized maximum price in atomic USDC units. It must fit in the JavaScript safe-integer range.
         network:
           type: string
           enum:
@@ -1005,171 +854,17 @@ components:
         pay_to:
           type: string
           pattern: ^0x[a-fA-F0-9]{40}$
-        quote_id:
-          type: string
-          pattern: ^qte_[A-Za-z0-9_-]+$
-        expires_at:
-          type: string
-          format: date-time
-        discovery_survived:
-          type: boolean
-          const: true
-        state:
-          type: string
-          enum:
-          - quoted
-          - payment_required
-          - delivered
-          - refused
-        paid_receipt_id:
-          oneOf:
-          - type: string
-            pattern: ^rcpt_[A-Za-z0-9_-]+$
-          - type: 'null'
-        refusal_reason:
-          oneOf:
-          - type: string
-            pattern: ^[A-Z0-9_]+$
-          - type: 'null'
-      oneOf:
-      - properties:
-          state:
-            enum:
-            - quoted
-            - payment_required
-          paid_receipt_id:
-            type: 'null'
-          refusal_reason:
-            type: 'null'
-      - properties:
-          state:
-            const: delivered
-          paid_receipt_id:
-            type: string
-            pattern: ^rcpt_[A-Za-z0-9_-]+$
-          refusal_reason:
-            type: 'null'
-      - properties:
-          state:
-            const: refused
-          paid_receipt_id:
-            type: 'null'
-          refusal_reason:
-            type: string
-            pattern: ^[A-Z0-9_]+$
-    Sha256Digest:
-      type: string
-      pattern: ^sha256:[a-f0-9]{64}$
-    MachineQuote:
+    CanonicalSchemaReference:
       type: object
       additionalProperties: false
       required:
-      - schema_version
-      - precheck_status
-      - quote_id
-      - quote_expires_at
-      - request_digest
-      - offer_generation_id
-      - exact_price
-      - supported_checks
-      - unsupported_checks
-      - expected_fulfillment
-      - paid_tool
-      - quote_scope
-      - client_echo_required
+      - schema_id
+      - schema_digest
       properties:
-        schema_version:
-          type: integer
-          const: 1
-        precheck_status:
+        schema_id:
           type: string
-          enum:
-          - eligible
-          - ineligible
-          - unsupported
-        quote_id:
-          type:
-          - string
-          - 'null'
-          pattern: ^pqt_[a-f0-9]{32}$
-        quote_expires_at:
-          type:
-          - string
-          - 'null'
-          format: date-time
-        request_digest:
-          oneOf:
-          - $ref: '#/components/schemas/Sha256Digest'
-          - type: 'null'
-        offer_generation_id:
-          type: string
-          pattern: ^agent-economy/offer-generation/
-        exact_price:
-          type: object
-          additionalProperties: false
-          required:
-          - amount_base_unit
-          - display_amount
-          - asset
-          - pay_to
-          - network
-          - payment_protocol
-          properties:
-            amount_base_unit:
-              type: string
-              pattern: ^[1-9][0-9]*$
-            display_amount:
-              type: string
-            asset:
-              type: string
-              pattern: ^0x[a-fA-F0-9]{40}$
-            pay_to:
-              type: string
-              pattern: ^0x[a-fA-F0-9]{40}$
-            network:
-              type: string
-              enum:
-              - eip155:84532
-              - eip155:8453
-            payment_protocol:
-              type: string
-              const: x402-v2-exact
-        supported_checks:
-          type: array
-          items:
-            type: string
-          uniqueItems: true
-        unsupported_checks:
-          type: array
-          items:
-            type: string
-          uniqueItems: true
-        expected_fulfillment:
-          type: object
-          additionalProperties: false
-          required:
-          - result_schema_id
-          - signed_evidence
-          - receipt
-          properties:
-            result_schema_id:
-              type: string
-              const: agent-economy/verify-evidence-response/1.0
-            signed_evidence:
-              type: boolean
-              const: true
-            receipt:
-              type: boolean
-              const: true
-        paid_tool:
-          type: string
-          const: verify_evidence
-        quote_scope:
-          type: string
-          const: precheck_preview
-        client_echo_required:
-          type: boolean
-          const: false
+        schema_digest:
+          $ref: '#/components/schemas/Sha256Digest'
     FreeRequestValidation:
       type: object
       additionalProperties: false
@@ -1305,6 +1000,311 @@ components:
           $ref: '#/components/schemas/PrecheckReceipt'
         next_step:
           type: string
+    JsonPointer:
+      type: string
+      maxLength: 512
+      description: RFC 6901 JSON Pointer; the empty string addresses the whole document.
+    Assertion:
+      oneOf:
+      - $ref: '#/components/schemas/Sha256EqualsAssertion'
+      - $ref: '#/components/schemas/JsonPointerExistsAssertion'
+      - $ref: '#/components/schemas/JsonPointerEqualsAssertion'
+      - $ref: '#/components/schemas/JsonTypeIsAssertion'
+      discriminator:
+        propertyName: op
+    RefusedPaidVerificationBinding:
+      allOf:
+      - $ref: '#/components/schemas/PaidVerificationBinding'
+      - properties:
+          state:
+            const: refused
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required:
+          - code
+          - message
+          - request_id
+          - retryable
+          properties:
+            code:
+              type: string
+              pattern: ^[A-Z0-9_]+$
+            message:
+              type: string
+            request_id:
+              type: string
+            retryable:
+              type: boolean
+            details:
+              type: object
+              properties:
+                paid_verification_binding:
+                  $ref: '#/components/schemas/RefusedPaidVerificationBinding'
+              additionalProperties: true
+    VerifyEvidenceRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - client_request_id
+      - evidence
+      - assertions
+      properties:
+        client_request_id:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: ^[A-Za-z0-9._:-]+$
+        evidence:
+          $ref: '#/components/schemas/InlineJsonEvidence'
+        assertions:
+          type: array
+          minItems: 1
+          maxItems: 16
+          items:
+            $ref: '#/components/schemas/Assertion'
+    InlineJsonEvidence:
+      type: object
+      additionalProperties: false
+      required:
+      - media_type
+      - content_base64
+      properties:
+        media_type:
+          type: string
+          const: application/json
+        content_base64:
+          type: string
+          contentEncoding: base64
+          contentMediaType: application/json
+          maxLength: 87384
+          description: Strict Base64. Decoded UTF-8 JSON must be between 1 byte and 65536 bytes.
+    JsonTypeIsAssertion:
+      type: object
+      additionalProperties: false
+      required:
+      - op
+      - path
+      - expected_type
+      properties:
+        op:
+          type: string
+          const: json_type_is
+        path:
+          $ref: '#/components/schemas/JsonPointer'
+        expected_type:
+          type: string
+          enum:
+          - 'null'
+          - boolean
+          - number
+          - string
+          - array
+          - object
+    JsonPointerExistsAssertion:
+      type: object
+      additionalProperties: false
+      required:
+      - op
+      - path
+      properties:
+        op:
+          type: string
+          const: json_pointer_exists
+        path:
+          $ref: '#/components/schemas/JsonPointer'
+    FreeRequestValidationFailure:
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - valid
+      - verification_executed
+      - payment_required
+      - supported
+      - reason_code
+      - message
+      - request_id
+      - canonical_offer
+      - machine_quote
+      - precheck_receipt
+      - next_step
+      properties:
+        schema_version:
+          type: string
+          const: agent-economy/request-validation/3.0
+        valid:
+          type: boolean
+          const: false
+        verification_executed:
+          type: boolean
+          const: false
+        payment_required:
+          type: boolean
+          const: false
+        supported:
+          type: boolean
+          const: false
+        reason_code:
+          type: string
+          pattern: ^[A-Z0-9_]+$
+        message:
+          type: string
+        request_id:
+          type: string
+        canonical_offer:
+          $ref: '#/components/schemas/CanonicalOffer'
+        machine_quote:
+          $ref: '#/components/schemas/MachineQuote'
+        precheck_receipt:
+          $ref: '#/components/schemas/PrecheckReceipt'
+        next_step:
+          type: string
+    Sha256EqualsAssertion:
+      type: object
+      additionalProperties: false
+      required:
+      - op
+      - expected_hex
+      properties:
+        op:
+          type: string
+          const: sha256_equals
+        expected_hex:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+    CanonicalOffer:
+      type: object
+      additionalProperties: false
+      required:
+      - schema_version
+      - service_id
+      - service_version
+      - generation_id
+      - tool
+      - input
+      - output
+      - pricing
+      - free_precheck
+      - facts_only
+      properties:
+        schema_version:
+          type: integer
+          const: 1
+        service_id:
+          type: string
+          const: dev.kgninja.agent-economy/agent-verification-utility
+        service_version:
+          type: string
+        generation_id:
+          type: string
+          pattern: ^agent-economy/offer-generation/
+        tool:
+          type: object
+          additionalProperties: false
+          required:
+          - name
+          - summary
+          - use_when
+          - do_not_use_when
+          properties:
+            name:
+              type: string
+              const: verify_evidence
+            summary:
+              type: string
+            use_when:
+              type: array
+              items:
+                type: string
+            do_not_use_when:
+              type: array
+              items:
+                type: string
+        input:
+          $ref: '#/components/schemas/CanonicalSchemaReference'
+        output:
+          type: object
+          additionalProperties: false
+          required:
+          - schema_id
+          - schema_digest
+          - deterministic
+          - signed_evidence
+          - receipt
+          properties:
+            schema_id:
+              type: string
+            schema_digest:
+              $ref: '#/components/schemas/Sha256Digest'
+            deterministic:
+              type: boolean
+              const: true
+            signed_evidence:
+              type: boolean
+              const: true
+            receipt:
+              type: boolean
+              const: true
+        pricing:
+          type: object
+          additionalProperties: false
+          required:
+          - payment_protocol
+          - network
+          - asset
+          - pay_to
+          - amount_base_unit
+          - display_amount
+          properties:
+            payment_protocol:
+              type: string
+              const: x402-v2-exact
+            network:
+              type: string
+              enum:
+              - eip155:84532
+              - eip155:8453
+            asset:
+              type: string
+              pattern: ^0x[a-fA-F0-9]{40}$
+            pay_to:
+              type: string
+              pattern: ^0x[a-fA-F0-9]{40}$
+            amount_base_unit:
+              type: string
+              pattern: ^[1-9][0-9]*$
+            display_amount:
+              type: string
+        free_precheck:
+          type: object
+          additionalProperties: false
+          required:
+          - available
+          properties:
+            available:
+              type: boolean
+              const: true
+        facts_only:
+          type: boolean
+          const: true
+    VerificationPrecheckIntent:
+      type: object
+      additionalProperties: false
+      required:
+      - request
+      - spend_policy
+      properties:
+        request:
+          $ref: '#/components/schemas/VerifyEvidenceRequest'
+        spend_policy:
+          $ref: '#/components/schemas/VerificationSpendPolicy'
   responses:
     Unavailable:
       description: Kill switch, maintenance, budget exhaustion, facilitator outage, or unavailable cost basis
