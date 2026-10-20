@@ -14,15 +14,16 @@ edges:
     registered_name: dev.kgninja.agent-economy/agent-verification-utility
     register_id: dev.kgninja.agent-economy/agent-verification-utility
     detected_by: sweep-agent-tools.py
-    detected: '2026-10-15'
+    detected: '2026-10-19'
   mcp_registry:
     servers:
     - dev.kgninja.agent-economy/agent-verification-utility
     - io.github.KG-NINJA/hyperxosist-agent
-    hosted_remote: 2
+    - io.github.KG-NINJA/si-dog-park
+    hosted_remote: 3
     local_package: 0
     transports:
-      streamable-http: 2
+      streamable-http: 3
     auth_declared: 0
     catalog_declared: true
     namespace_domains:
@@ -43,13 +44,14 @@ edges:
   relationship: compatible
   shape: a2a
   evidence_kind: own-wellknown
-  degree: conformant
+  degree: flavored
   report_only: true
   a2a_card:
-    grade: conformant
+    grade: flavored
     verdict: live
     protocol_version: '1.0'
-    deviations: []
+    deviations:
+    - no-protocolVersion
     card_subject: api
   contract_reference:
     register: provider's own /.well-known/agent-card.json
@@ -61,7 +63,7 @@ edges:
     matched_domain: kgninja.dev
     matched_by: own-domain
     detected_by: sweep-ai-agents.py
-    detected: '2026-10-15'
+    detected: '2026-10-19'
   detected_by: sweep-ai-agents.py
   first_seen: '2026-10-15'
 - partner_name: a2aregistry.org
@@ -97,7 +99,7 @@ edges:
     sample_agents:
     - Agent Verification Utility
     detected_by: sweep-ai-agents.py
-    detected: '2026-10-15'
+    detected: '2026-10-19'
   detected_by: sweep-ai-agents.py
   first_seen: '2026-10-15'
 generated: '2026-10-14'
