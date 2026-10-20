@@ -1,4 +1,12 @@
 {
+  "endpoint": "https://agent-economy.kgninja.dev/mcp",
+  "captured": "2026-10-20",
+  "method": "initialize + tools/list (anonymous, no tool called; roadmap#992)",
+  "protocol_version": "2025-06-18",
+  "server_info": {
+    "name": "dev.kgninja/agent-verification-utility",
+    "version": "0.4.3"
+  },
   "result": {
     "tools": [
       {
@@ -36,7 +44,7 @@
       {
         "name": "quote_verify_evidence",
         "title": "Quote Verification",
-        "description": "Validate a complete verification request and return a free quote when the margin policy passes.",
+        "description": "Obtain a free bound quote for deterministic checks on supplied JSON before deciding to purchase. After a successful free precheck at POST /validate-request, supply the unchanged intent and its precheck_receipt.receipt_digest. Creates or reuses a persisted quote and records observability events; no payment, signing or paid verification is performed. The bound quote ties request/evidence digests, precheck digest, spend policy, quoted amount, network, asset, recipient and expiry together. Server availability, fresh cost basis and conservative contribution-margin thresholds must pass. Returns the quote as JSON text and structuredContent: quote_id, request_hash, price (atomic USDC, 6 decimals), expires_at, economic_guard, purchase instructions and paid_verification_binding in state quoted, not a paid receipt. Application failures return isError=true with JSON error.code, message, retryable and optional details (for example PRECHECK_STALE, PRICE_CAP_EXCEEDED, IDEMPOTENCY_KEY_CONFLICT, IDEMPOTENCY_KEY_EXPIRED or UNPROFITABLE_TRANSACTION); invalid argument shapes are rejected by MCP schema validation. Re-run precheck after request/policy changes; do not pay on refusal. Next use prepare_verify_evidence_purchase with the same key and intent for the HTTP purchase request, or explicitly authorize the separate paid verify_evidence flow.",
         "inputSchema": {
           "type": "object",
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -45,7 +53,8 @@
               "type": "string",
               "minLength": 16,
               "maxLength": 128,
-              "pattern": "^[A-Za-z0-9_-]+$"
+              "pattern": "^[A-Za-z0-9_-]+$",
+              "description": "Required 16-128 characters from A-Z, a-z, 0-9, underscore or hyphen. Reuse with the unchanged intent to reuse an unexpired quote; changed bindings return IDEMPOTENCY_KEY_CONFLICT. An expired key returns IDEMPOTENCY_KEY_EXPIRED; use a new key."
             },
             "intent": {
               "type": "object",
@@ -57,26 +66,30 @@
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 64,
-                      "pattern": "^[A-Za-z0-9._:-]+$"
+                      "pattern": "^[A-Za-z0-9._:-]+$",
+                      "description": "Required caller request identifier, 1-64 characters from A-Z, a-z, 0-9, dot, underscore, colon or hyphen; included in the request hash."
                     },
                     "evidence": {
                       "type": "object",
                       "properties": {
                         "media_type": {
                           "type": "string",
-                          "const": "application/json"
+                          "const": "application/json",
+                          "description": "Required literal application/json."
                         },
                         "content_base64": {
                           "type": "string",
                           "minLength": 4,
-                          "maxLength": 87384
+                          "maxLength": 87384,
+                          "description": "Required strict standard Base64 of UTF-8 JSON; 4-87384 encoded characters and at most 65536 decoded bytes. JSON limits: depth 32, object keys 2048, values 8192; integers must be JavaScript safe integers."
                         }
                       },
                       "required": [
                         "media_type",
                         "content_base64"
                       ],
-                      "additionalProperties": false
+                      "additionalProperties": false,
+                      "description": "Required caller-supplied JSON bytes; no remote evidence is fetched."
                     },
                     "assertions": {
                       "minItems": 1,
@@ -89,11 +102,13 @@
                             "properties": {
                               "op": {
                                 "type": "string",
-                                "const": "sha256_equals"
+                                "const": "sha256_equals",
+                                "description": "Compare SHA-256 of the raw decoded evidence bytes."
                               },
                               "expected_hex": {
                                 "type": "string",
-                                "pattern": "^[a-f0-9]{64}$"
+                                "pattern": "^[a-f0-9]{64}$",
+                                "description": "Required expected digest as exactly 64 lowercase hex characters, without sha256: prefix."
                               }
                             },
                             "required": [
@@ -107,11 +122,13 @@
                             "properties": {
                               "op": {
                                 "type": "string",
-                                "const": "json_pointer_exists"
+                                "const": "json_pointer_exists",
+                                "description": "Check whether the JSON Pointer resolves."
                               },
                               "path": {
                                 "type": "string",
-                                "maxLength": 512
+                                "maxLength": 512,
+                                "description": "Required RFC 6901 JSON Pointer, at most 512 characters; empty string selects the document root. Escape tilde as ~0 and slash as ~1."
                               }
                             },
                             "required": [
@@ -125,13 +142,17 @@
                             "properties": {
                               "op": {
                                 "type": "string",
-                                "const": "json_pointer_equals"
+                                "const": "json_pointer_equals",
+                                "description": "Compare the selected JSON value with expected."
                               },
                               "path": {
                                 "type": "string",
-                                "maxLength": 512
+                                "maxLength": 512,
+                                "description": "Required RFC 6901 JSON Pointer, at most 512 characters; empty string selects the document root. Escape tilde as ~0 and slash as ~1."
                               },
-                              "expected": {}
+                              "expected": {
+                                "description": "Required expected JSON value, including null; JSON depth/key/value and safe-integer limits apply."
+                              }
                             },
                             "required": [
                               "op",
@@ -145,11 +166,13 @@
                             "properties": {
                               "op": {
                                 "type": "string",
-                                "const": "json_type_is"
+                                "const": "json_type_is",
+                                "description": "Check the selected JSON value type."
                               },
                               "path": {
                                 "type": "string",
-                                "maxLength": 512
+                                "maxLength": 512,
+                                "description": "Required RFC 6901 JSON Pointer, at most 512 characters; empty string selects the document root. Escape tilde as ~0 and slash as ~1."
                               },
                               "expected_type": {
                                 "type": "string",
@@ -160,7 +183,8 @@
                                   "string",
                                   "array",
                                   "object"
-                                ]
+                                ],
+                                "description": "Required JSON type: null, boolean, number, string, array or object."
                               }
                             },
                             "required": [
@@ -171,7 +195,8 @@
                             "additionalProperties": false
                           }
                         ]
-                      }
+                      },
+                      "description": "Required 1-16 deterministic assertions. Each operation accepts only its documented fields. Precheck validates input, not assertion truth."
                     }
                   },
                   "required": [
@@ -179,32 +204,38 @@
                     "evidence",
                     "assertions"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "description": "Required complete bounded verification request, unchanged from precheck; no optional fields or defaults."
                 },
                 "spend_policy": {
                   "type": "object",
                   "properties": {
                     "policy_version": {
                       "type": "string",
-                      "const": "agent-economy/precheck-policy/2.0"
+                      "const": "agent-economy/precheck-policy/2.0",
+                      "description": "Required literal agent-economy/precheck-policy/2.0."
                     },
                     "max_amount_atomic": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "Required positive decimal integer string in atomic USDC units (1000000 = 1 USDC), at most 16 digits and within JavaScript safe-integer range. No leading zero; must cover the current quoted price."
                     },
                     "network": {
                       "type": "string",
                       "enum": [
                         "eip155:84532",
                         "eip155:8453"
-                      ]
+                      ],
+                      "description": "Required eip155:8453 (Base) or eip155:84532 (Base Sepolia); must match current advertised terms."
                     },
                     "asset": {
                       "type": "string",
-                      "pattern": "^0x[a-fA-F0-9]{40}$"
+                      "pattern": "^0x[a-fA-F0-9]{40}$",
+                      "description": "Required USDC contract address, 0x plus 40 hex characters; must match current advertised asset."
                     },
                     "pay_to": {
                       "type": "string",
-                      "pattern": "^0x[a-fA-F0-9]{40}$"
+                      "pattern": "^0x[a-fA-F0-9]{40}$",
+                      "description": "Required allowed payment recipient, 0x plus 40 hex characters; must match current advertised payTo."
                     }
                   },
                   "required": [
@@ -214,11 +245,13 @@
                     "asset",
                     "pay_to"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "description": "Required caller spending limits and allowed terms; preserve from precheck. All five fields required; no defaults."
                 },
                 "precheck_receipt_digest": {
                   "type": "string",
-                  "pattern": "^sha256:[a-f0-9]{64}$"
+                  "pattern": "^sha256:[a-f0-9]{64}$",
+                  "description": "Required sha256: followed by 64 lowercase hex characters, copied from precheck_receipt.receipt_digest of the successful free precheck. Recomputed against request, policy and current discovery contract; mismatches return PRECHECK_STALE."
                 }
               },
               "required": [
@@ -226,7 +259,8 @@
                 "spend_policy",
                 "precheck_receipt_digest"
               ],
-              "additionalProperties": false
+              "additionalProperties": false,
+              "description": "Required prechecked purchase intent: request, spend_policy and precheck_receipt_digest are all required, with no defaults or optional fields. Preserve the request and policy used in the successful free POST /validate-request."
             }
           },
           "required": [
@@ -244,7 +278,7 @@
       {
         "name": "prepare_verify_evidence_purchase",
         "title": "Prepare HTTP Purchase",
-        "description": "After a successful free precheck, create or reuse a bound quote and return the exact HTTP request that will produce the x402 challenge. Do not pay until the binding, price, network, asset, payTo, and expiry match local policy.",
+        "description": "Prepare an HTTP purchase request for deterministic JSON verification after a successful free precheck; a prior quote tool call is optional. After a successful free precheck at POST /validate-request, supply the unchanged intent and its precheck_receipt.receipt_digest. Creates or reuses a persisted quote and records observability events; no payment, signing or paid verification is performed. The bound quote ties request/evidence digests, precheck digest, spend policy, quoted amount, network, asset, recipient and expiry together. Server availability, fresh cost basis and conservative contribution-margin thresholds must pass. Returns JSON text and structuredContent containing quote, request (POST /verify-evidence, content-type and X-Quote-ID headers, unchanged intent body), expected_first_status=402 and expected_payment_header=PAYMENT-REQUIRED. It does not send this request. Application failures return isError=true with JSON error.code, message, retryable and optional details (for example PRECHECK_STALE, PRICE_CAP_EXCEEDED, IDEMPOTENCY_KEY_CONFLICT, IDEMPOTENCY_KEY_EXPIRED or UNPROFITABLE_TRANSACTION); invalid argument shapes are rejected by MCP schema validation. Re-run precheck after request/policy changes; do not pay on refusal. Next send the returned request to obtain a challenge, check binding, amount, network, asset, payTo and expiry against local policy, then authorize payment separately. Use quote_verify_evidence when only quote terms are needed.",
         "inputSchema": {
           "type": "object",
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -253,7 +287,8 @@
               "type": "string",
               "minLength": 16,
               "maxLength": 128,
-              "pattern": "^[A-Za-z0-9_-]+$"
+              "pattern": "^[A-Za-z0-9_-]+$",
+              "description": "Required 16-128 characters from A-Z, a-z, 0-9, underscore or hyphen. Reuse with the unchanged intent to reuse an unexpired quote; changed bindings return IDEMPOTENCY_KEY_CONFLICT. An expired key returns IDEMPOTENCY_KEY_EXPIRED; use a new key."
             },
             "intent": {
               "type": "object",
@@ -265,26 +300,30 @@
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 64,
-                      "pattern": "^[A-Za-z0-9._:-]+$"
+                      "pattern": "^[A-Za-z0-9._:-]+$",
+                      "description": "Required caller request identifier, 1-64 characters from A-Z, a-z, 0-9, dot, underscore, colon or hyphen; included in the request hash."
                     },
                     "evidence": {
                       "type": "object",
                       "properties": {
                         "media_type": {
                           "type": "string",
-                          "const": "application/json"
+                          "const": "application/json",
+                          "description": "Required literal application/json."
                         },
                         "content_base64": {
                           "type": "string",
                           "minLength": 4,
-                          "maxLength": 87384
+                          "maxLength": 87384,
+                          "description": "Required strict standard Base64 of UTF-8 JSON; 4-87384 encoded characters and at most 65536 decoded bytes. JSON limits: depth 32, object keys 2048, values 8192; integers must be JavaScript safe integers."
                         }
                       },
                       "required": [
                         "media_type",
                         "content_base64"
                       ],
-                      "additionalProperties": false
+                      "additionalProperties": false,
+                      "description": "Required caller-supplied JSON bytes; no remote evidence is fetched."
                     },
                     "assertions": {
                       "minItems": 1,
@@ -297,11 +336,13 @@
                             "properties": {
                               "op": {
                                 "type": "string",
-                                "const": "sha256_equals"
+                                "const": "sha256_equals",
+                                "description": "Compare SHA-256 of the raw decoded evidence bytes."
                               },
                               "expected_hex": {
                                 "type": "string",
-                                "pattern": "^[a-f0-9]{64}$"
+                                "pattern": "^[a-f0-9]{64}$",
+                                "description": "Required expected digest as exactly 64 lowercase hex characters, without sha256: prefix."
                               }
                             },
                             "required": [
@@ -315,11 +356,13 @@
                             "properties": {
                               "op": {
                                 "type": "string",
-                                "const": "json_pointer_exists"
+                                "const": "json_pointer_exists",
+                                "description": "Check whether the JSON Pointer resolves."
                               },
                               "path": {
                                 "type": "string",
-                                "maxLength": 512
+                                "maxLength": 512,
+                                "description": "Required RFC 6901 JSON Pointer, at most 512 characters; empty string selects the document root. Escape tilde as ~0 and slash as ~1."
                               }
                             },
                             "required": [
@@ -333,13 +376,17 @@
                             "properties": {
                               "op": {
                                 "type": "string",
-                                "const": "json_pointer_equals"
+                                "const": "json_pointer_equals",
+                                "description": "Compare the selected JSON value with expected."
                               },
                               "path": {
                                 "type": "string",
-                                "maxLength": 512
+                                "maxLength": 512,
+                                "description": "Required RFC 6901 JSON Pointer, at most 512 characters; empty string selects the document root. Escape tilde as ~0 and slash as ~1."
                               },
-                              "expected": {}
+                              "expected": {
+                                "description": "Required expected JSON value, including null; JSON depth/key/value and safe-integer limits apply."
+                              }
                             },
                             "required": [
                               "op",
@@ -353,11 +400,13 @@
                             "properties": {
                               "op": {
                                 "type": "string",
-                                "const": "json_type_is"
+                                "const": "json_type_is",
+                                "description": "Check the selected JSON value type."
                               },
                               "path": {
                                 "type": "string",
-                                "maxLength": 512
+                                "maxLength": 512,
+                                "description": "Required RFC 6901 JSON Pointer, at most 512 characters; empty string selects the document root. Escape tilde as ~0 and slash as ~1."
                               },
                               "expected_type": {
                                 "type": "string",
@@ -368,7 +417,8 @@
                                   "string",
                                   "array",
                                   "object"
-                                ]
+                                ],
+                                "description": "Required JSON type: null, boolean, number, string, array or object."
                               }
                             },
                             "required": [
@@ -379,7 +429,8 @@
                             "additionalProperties": false
                           }
                         ]
-                      }
+                      },
+                      "description": "Required 1-16 deterministic assertions. Each operation accepts only its documented fields. Precheck validates input, not assertion truth."
                     }
                   },
                   "required": [
@@ -387,32 +438,38 @@
                     "evidence",
                     "assertions"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "description": "Required complete bounded verification request, unchanged from precheck; no optional fields or defaults."
                 },
                 "spend_policy": {
                   "type": "object",
                   "properties": {
                     "policy_version": {
                       "type": "string",
-                      "const": "agent-economy/precheck-policy/2.0"
+                      "const": "agent-economy/precheck-policy/2.0",
+                      "description": "Required literal agent-economy/precheck-policy/2.0."
                     },
                     "max_amount_atomic": {
-                      "type": "string"
+                      "type": "string",
+                      "description": "Required positive decimal integer string in atomic USDC units (1000000 = 1 USDC), at most 16 digits and within JavaScript safe-integer range. No leading zero; must cover the current quoted price."
                     },
                     "network": {
                       "type": "string",
                       "enum": [
                         "eip155:84532",
                         "eip155:8453"
-                      ]
+                      ],
+                      "description": "Required eip155:8453 (Base) or eip155:84532 (Base Sepolia); must match current advertised terms."
                     },
                     "asset": {
                       "type": "string",
-                      "pattern": "^0x[a-fA-F0-9]{40}$"
+                      "pattern": "^0x[a-fA-F0-9]{40}$",
+                      "description": "Required USDC contract address, 0x plus 40 hex characters; must match current advertised asset."
                     },
                     "pay_to": {
                       "type": "string",
-                      "pattern": "^0x[a-fA-F0-9]{40}$"
+                      "pattern": "^0x[a-fA-F0-9]{40}$",
+                      "description": "Required allowed payment recipient, 0x plus 40 hex characters; must match current advertised payTo."
                     }
                   },
                   "required": [
@@ -422,11 +479,13 @@
                     "asset",
                     "pay_to"
                   ],
-                  "additionalProperties": false
+                  "additionalProperties": false,
+                  "description": "Required caller spending limits and allowed terms; preserve from precheck. All five fields required; no defaults."
                 },
                 "precheck_receipt_digest": {
                   "type": "string",
-                  "pattern": "^sha256:[a-f0-9]{64}$"
+                  "pattern": "^sha256:[a-f0-9]{64}$",
+                  "description": "Required sha256: followed by 64 lowercase hex characters, copied from precheck_receipt.receipt_digest of the successful free precheck. Recomputed against request, policy and current discovery contract; mismatches return PRECHECK_STALE."
                 }
               },
               "required": [
@@ -434,7 +493,8 @@
                 "spend_policy",
                 "precheck_receipt_digest"
               ],
-              "additionalProperties": false
+              "additionalProperties": false,
+              "description": "Required prechecked purchase intent: request, spend_policy and precheck_receipt_digest are all required, with no defaults or optional fields. Preserve the request and policy used in the successful free POST /validate-request."
             }
           },
           "required": [
@@ -662,7 +722,5 @@
         }
       }
     ]
-  },
-  "jsonrpc": "2.0",
-  "id": 1
+  }
 }
