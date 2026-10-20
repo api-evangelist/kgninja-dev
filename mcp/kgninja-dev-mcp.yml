@@ -248,3 +248,46 @@ tool_quality:
   scored: false
   note: Facts from the saved tools/list capture (mcp_tool_quality.py); recorded, not scored. Checks learned
     from Glimind's agent-readiness audit.
+tools:
+- name: describe_verify_evidence
+  description: Describe when deterministic verification is useful, when it is not, free request validation,
+    recipes, limits, and the explicit paid MCP path.
+- name: get_revenue_goal_status
+  description: Read the active revenue goal, measured funnel, contribution margin, and the next bounded
+    improvement recommendation. This tool never changes price, spends funds, or sends messages.
+- name: quote_verify_evidence
+  description: 'Obtain a free bound quote for deterministic checks on supplied JSON before deciding to
+    purchase. After a successful free precheck at POST /validate-request, supply the unchanged intent
+    and its precheck_receipt.receipt_digest. Creates or reuses a persisted quote and records observability
+    events; no payment, signing or paid verification is performed. The bound quote ties request/evidence
+    digests, precheck digest, spend policy, quoted amount, network, asset, recipient and expiry together.
+    Server availability, fresh cost basis and conservative contribution-margin thresholds must pass. Returns
+    the quote as JSON text and structuredContent: quote_id, request_hash, price (atomic USDC, 6 decimals),
+    expires_at, economic_guard, purchase instructions and paid_verification_binding in state quoted, not
+    a paid receipt. Application failures return isError=true with JSON error.code, message, retryable
+    and optional details (for example PRECHECK_STALE, PRICE_CAP_EXCEEDED, IDEMPOTENCY_KEY_CONFLICT, IDEMPOTENCY_KEY_EXPIRED
+    or UNPROFITABLE_TRANSACTION); invalid argument shapes are rejected by MCP schema validation. Re-run
+    precheck after request/policy changes; do not pay on refusal. Next use prepare_verify_evidence_purchase
+    with the same key and intent for the HTTP purchase request, or explicitly authorize the separate paid
+    verify_evidence flow.'
+- name: prepare_verify_evidence_purchase
+  description: Prepare an HTTP purchase request for deterministic JSON verification after a successful
+    free precheck; a prior quote tool call is optional. After a successful free precheck at POST /validate-request,
+    supply the unchanged intent and its precheck_receipt.receipt_digest. Creates or reuses a persisted
+    quote and records observability events; no payment, signing or paid verification is performed. The
+    bound quote ties request/evidence digests, precheck digest, spend policy, quoted amount, network,
+    asset, recipient and expiry together. Server availability, fresh cost basis and conservative contribution-margin
+    thresholds must pass. Returns JSON text and structuredContent containing quote, request (POST /verify-evidence,
+    content-type and X-Quote-ID headers, unchanged intent body), expected_first_status=402 and expected_payment_header=PAYMENT-REQUIRED.
+    It does not send this request. Application failures return isError=true with JSON error.code, message,
+    retryable and optional details (for example PRECHECK_STALE, PRICE_CAP_EXCEEDED, IDEMPOTENCY_KEY_CONFLICT,
+    IDEMPOTENCY_KEY_EXPIRED or UNPROFITABLE_TRANSACTION); invalid argument shapes are rejected by MCP
+    schema validation. Re-run precheck after request/policy changes; do not pay on refusal. Next send
+    the returned request to obtain a challenge, check binding, amount, network, asset, payTo and expiry
+    against local policy, then authorize payment separately. Use quote_verify_evidence when only quote
+    terms are needed.
+- name: verify_evidence
+  description: Run deterministic checks and return Ed25519-signed evidence after one explicitly authorized
+    x402 payment. A free precheck receipt and a matching bound payment requirement are required before
+    signing.
+tools_count: 5
