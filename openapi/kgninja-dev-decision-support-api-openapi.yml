@@ -1318,3 +1318,9 @@ components:
       scheme: bearer
       bearerFormat: signed anonymous registration receipt
       description: Optional 15-minute service-local receipt used only to inspect its own registration claim. It grants no API access and does not authorize payment.
+x-provenance:
+  method: harvested
+  publisher: KG-NINJA
+  source: https://agent-economy.kgninja.dev/openapi.json
+  note: split by refine-openapis from the provider's own published document, verified by fetch (openapi/_original/*.fetch.json);
+    stamped by stamp-openapi-provenance.py (roadmap#793)
