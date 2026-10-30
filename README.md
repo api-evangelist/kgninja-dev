@@ -64,12 +64,130 @@
 > Full detail: **[Where this data comes from](https://apievangelist.com/about/where-our-data-comes-from)**
 <!-- API-EVANGELIST-PROVENANCE:END -->
 
-KG-NINJA is the operator identity (GitHub user KG-NINJA, Osaka; Cloudflare Wallet handle @kgninja) behind **Agent Verification Utility** at https://agent-economy.kgninja.dev — a Cloudflare Workers service (v0.4.3) that runs bounded deterministic checks over caller-supplied JSON and returns Ed25519-signed evidence, sold to autonomous agents per call for 10000 atomic USDC ($0.01) on Base through x402 v2, with no account, API key or OAuth. It first reached this network through the a2aregistry.org listing of its A2A agent card.
+KG-NINJA is the operator identity (GitHub user KG-NINJA, Osaka; Cloudflare Wallet handle @kgninja) behind Agent Verification Utility at agent-economy.kgninja.dev, a Cloudflare Workers service (v0.4.3) that runs bounded deterministic checks (SHA-256 equality, JSON Pointer existence/equality/type) over caller-supplied inline JSON and returns an Ed25519-signed execution record, sold to agents per call for 10000 atomic USDC ($0.01) on Base through x402 v2 with no account, API key or OAuth. One origin exposes the product three ways — a 44-operation OpenAPI 3.1.0 contract at /openapi.json, a remote Streamable HTTP MCP server at /mcp answering an anonymous tools/list (five tools, one paid), and an A2A 1.0 agent card at /.well-known/agent-card.json with JSON-RPC at /a2a — plus an RFC 9727 API catalog, an MCP Registry server.json, a provider-published Agent Skill, a JWKS, an x402 manifest, llms.txt and Content-Signal. The apex kgninja.dev has no A record; the subdomain is its only web presence.
 
-One origin exposes the product three ways, all profiled here from public, credential-free fetches on 2026-09-19:
+**Areas:** Agents · Agentic Commerce · A2A · MCP · x402 · Verification · JSON · Cryptography · Cloudflare Workers · Agent-Native · Japan
 
-- **REST** — OpenAPI 3.1.0, 44 operations, at https://agent-economy.kgninja.dev/openapi.json (`openapi/`, verbatim)
-- **MCP** — remote Streamable HTTP server at https://agent-economy.kgninja.dev/mcp; anonymous `tools/list` returns five tools, one paid (`mcp/`)
-- **A2A** — 1.0 agent card at https://agent-economy.kgninja.dev/.well-known/agent-card.json, JSON-RPC at `/a2a` (`a2a/`)
+## KG-NINJA on APIs.io
 
-Also published by the provider and captured verbatim: an RFC 9727 API catalog, an MCP Registry `server.json` and server card, an x402 manifest, an AI Catalog document, an Agent Skill with a SHA-256 discovery index, a JWKS, `llms.txt`, and Content-Signal directives (`well-known/`, `skills/`, `llms/`). The apex `kgninja.dev` has no A record; the product subdomain is the only web presence.
+Everything profiled for KG-NINJA is published on APIs.io rather than in this repository. Start at the provider page — **[apis.io/providers/kgninja-dev/](https://apis.io/providers/kgninja-dev/)** — or go straight to one of the APIs or properties below.
+
+### APIs (10)
+
+- [Agent Verification Utility MCP Server](https://apis.io/apis/kgninja-dev/agent-verification-utility-mcp-server/) — Remote Model Context Protocol server at https://agent-economy.kgninja.dev/mcp — stateless Streamable HTTP, POST only (GET returns 405), serverInfo…
+- [Agent Verification Utility A2A Agent](https://apis.io/apis/kgninja-dev/agent-verification-utility-a2a-agent/) — Agent2Agent (A2A) 1.0 surface: an agent card served from https://agent-economy.kgninja.dev/.well-known/agent-card.json (supportedInterfaces[] JSONRPC at…
+- [KG-NINJA A2a API](https://apis.io/apis/kgninja-dev/kgninja-dev-a2a-api/) — Synchronous A2A 1.0 JSON-RPC quote preparation
+- [KG-NINJA Decision Support API](https://apis.io/apis/kgninja-dev/kgninja-dev-decision-support-api/) — Free use-case selection and request validation before payment
+- [KG-NINJA Discovery API](https://apis.io/apis/kgninja-dev/kgninja-dev-discovery-api/) — Machine-readable service discovery
+- [KG-NINJA Goals API](https://apis.io/apis/kgninja-dev/kgninja-dev-goals-api/) — Goal-driven revenue measurement and improvement recommendations
+- [KG-NINJA MCP API](https://apis.io/apis/kgninja-dev/kgninja-dev-mcp-api/) — Stateless MCP Streamable HTTP transport
+- [KG-NINJA Operations API](https://apis.io/apis/kgninja-dev/kgninja-dev-operations-api/) — Availability and operational status
+- [KG-NINJA Purchase API](https://apis.io/apis/kgninja-dev/kgninja-dev-purchase-api/) — Quote and paid verification operations
+- [KG-NINJA Registration API](https://apis.io/apis/kgninja-dev/kgninja-dev-registration-api/) — Optional anonymous, short-lived agent registration
+
+### Published properties
+
+Each property below is a page on APIs.io carrying the machine-readable artifact and what it says.
+
+#### MCP servers (1)
+
+Model Context Protocol servers that expose the API to agents.
+
+- [kgninja-dev-mcp.yml](https://apis.io/servers/kgninja-dev/kgninja-dev-mcp-yml/)
+
+#### Agentic access (1)
+
+Which operations an agent can call, which act, and which need a human in the loop.
+
+- [Kgninja Dev Agentic Access](https://apis.io/agentic-access/kgninja-dev/kgninja-dev-agentic-access/)
+
+#### Overlays (1)
+
+OpenAPI overlays, including conversational phrasing for each operation.
+
+- [Kgninja Dev Openapi Overlay](https://apis.io/overlays/kgninja-dev/kgninja-dev-openapi-overlay/)
+
+#### Security (2)
+
+Authentication, trust centre, and vulnerability disclosure.
+
+- [Kgninja Dev Authentication](https://apis.io/security/kgninja-dev/kgninja-dev-authentication/)
+- [Kgninja Dev Domain Security](https://apis.io/security/kgninja-dev/kgninja-dev-domain-security/)
+
+#### Plans and pricing (1)
+
+Published plans, tiers and prices.
+
+- [Kgninja Dev Plans Pricing](https://apis.io/plans/kgninja-dev/kgninja-dev-plans-pricing/)
+
+#### Rate limits (1)
+
+Published request limits.
+
+- [Kgninja Dev Rate Limits](https://apis.io/rate-limits/kgninja-dev/kgninja-dev-rate-limits/)
+
+## Where to find this API
+
+Links to the company's own pages. This repository publishes no copy of their specifications — the canonical document is theirs and lives at the URLs below.
+
+- [Website](https://agent-economy.kgninja.dev/)
+- [Documentation](https://agent-economy.kgninja.dev/docs/deterministic-json-verification)
+- [Getting started](https://agent-economy.kgninja.dev/index.md)
+- [API reference](https://agent-economy.kgninja.dev/openapi.json)
+- [Pricing](https://agent-economy.kgninja.dev/agent.json)
+- [GitHub](https://github.com/KG-NINJA)
+
+## API Evangelist rating
+
+**Kin Score 37.7** — thin · rubric 0.25.0 · scored 2026-10-23
+
+| Facet | Score |
+|---|---|
+| Discoverability | 75.0 |
+| Contract quality | 42.2 |
+| Contract governance | 18.2 |
+| Operational transparency | 5.3 |
+| Developer ergonomics | 54.8 |
+| Access clarity | 31.6 |
+
+**Agent readiness 53.9** — agent-native
+
+| Agent-readiness dimension | Result |
+|---|---|
+| Spec Presence | yes |
+| Agentic Access | derived (partial credit) |
+| Reversibility Documented | — |
+| MCP Server | documented (partial credit) |
+| Auth Clarity | bearer (partial credit) |
+| Idempotency | verified |
+| Error Semantics | verified |
+| OpenAPI Examples | partial |
+| Rate Limit Signal | verified |
+| Event Surface Described | — |
+| Agent Skills | yes |
+| Well Known Catalog | yes |
+| Consent Identity | yes |
+| Agent Card | conformant |
+| Dry Run Mode | — |
+| Delegated Identity | — |
+| Protected Resource Metadata | — |
+| Dynamic Client Registration | — |
+| Agentic Commerce | — |
+| Pagination Ratio | — |
+| Operation Distinctiveness | distinct |
+
+**Regulatory alignment 16.7** — Horizontal (data, software, accessibility, platform)
+
+The rubric is published at [github.com/api-evangelist/kin-score](https://github.com/api-evangelist/kin-score). The per-check breakdown behind these numbers — which checks were earned, partial or missed — along with score history and how this provider compares to its peers, is available at [apis.io/providers/kgninja-dev/](https://apis.io/providers/kgninja-dev/).
+
+## How this profile is made
+
+API Evangelist profiles a company's public API surface the way a developer would find it: the website, developer portal and documentation, the specifications it publishes, its public repositories, and its pricing, status and changelog pages. From that it derives the properties above — contracts split per API, workflows, schemas, collections, governance rules, plans and rate limits — and scores them against the published [Kin Score rubric](https://github.com/api-evangelist/kin-score).
+
+The artifacts are published on [APIs.io](https://apis.io), not in this repository. This repository is the public record for KG-NINJA: the place to say something is wrong, missing or out of date, and to ask for a re-score or a removal.
+
+## Open an issue
+
+- **Something about this listing** — a wrong description, a missing API, a stale artifact or a question about the rating: [open an issue on this repository](https://github.com/api-evangelist/kgninja-dev/issues/new).
+- **A new API, or one that is not in the catalog yet** — [submit it on APIs.io](https://apis.io/add/).
+- **Anything else** — [the APIs.io inbox](https://github.com/api-search/inbox/issues/new) or [info@apievangelist.com](mailto:info@apievangelist.com).
